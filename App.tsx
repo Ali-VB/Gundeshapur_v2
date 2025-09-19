@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAuth } from './index';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
@@ -14,23 +15,19 @@ function App() {
     return <LoadingSpinner />;
   }
 
-  if (!user) {
-    return <LandingPage />;
-  }
-  
-  const AppContent = () => {
-      if (user.role === 'admin') {
-          return <AdminPage />;
-      }
-      if (!user.sheetId) {
-          return <SetupPage />;
-      }
-      return <DashboardPage />;
-  }
+  const renderAuthenticatedApp = () => {
+    if (user?.role === 'admin') {
+      return <AdminPage />;
+    }
+    if (!user?.sheetId) {
+      return <SetupPage />;
+    }
+    return <DashboardPage />;
+  };
 
   return (
     <Layout>
-      <AppContent />
+      {!user ? <LandingPage /> : renderAuthenticatedApp()}
     </Layout>
   );
 }
