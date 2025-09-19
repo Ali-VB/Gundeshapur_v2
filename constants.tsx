@@ -2,8 +2,8 @@
 
 const SUPER_ADMIN_EMAIL = 'admin@example.com'; // Hardcoded Super Admin
 
-// --- MOCK DATABASE ---
-let mockDatabase: { [key: string]: any } = {
+// --- INITIAL MOCK DATA (STATELESS) ---
+const initialDatabaseState = {
   "users/admin_uid": {
     uid: "admin_uid",
     email: SUPER_ADMIN_EMAIL,
@@ -19,7 +19,7 @@ let mockDatabase: { [key: string]: any } = {
     email: "user@example.com",
     displayName: "Regular User",
     role: "user",
-    sheetId: null, // Give user a null sheetId to show setup page
+    sheetId: null, // Ensures onboarding for this user
     plan: 'free',
     subscriptionStatus: 'active',
   },
@@ -34,23 +34,30 @@ let mockDatabase: { [key: string]: any } = {
   },
 };
 
-// --- MOCK COLLECTIONS FOR LIBRARY ---
-let mockBooks = [
+const initialBooksState = [
     { id: 'book_1', title: 'The Great Gatsby', author: 'F. Scott Fitzgerald', year: 1925, isbn: '9780743273565', publisher: 'Charles Scribner\'s Sons', language: 'English', ddc: '813.52', tags: ['Classic', 'Novel'], totalCopies: 3, availableCopies: 2 },
     { id: 'book_2', title: 'Dune', author: 'Frank Herbert', year: 1965, isbn: '9780441013593', publisher: 'Chilton Books', language: 'English', ddc: '813.54', tags: ['Sci-Fi', 'Adventure'], totalCopies: 2, availableCopies: 1 },
     { id: 'book_3', title: '1984', author: 'George Orwell', year: 1949, isbn: '9780451524935', publisher: 'Secker & Warburg', language: 'English', ddc: '823.912', tags: ['Dystopian', 'Political Fiction'], totalCopies: 4, availableCopies: 4 },
 ];
 
-let mockMembers = [
+const initialMembersState = [
     { id: 'member_1', name: 'Alice Johnson', email: 'alice@email.com', phone: '123-456-7890', role: 'Member', status: 'Active' },
     { id: 'member_2', name: 'Bob Williams', email: 'bob@email.com', phone: '098-765-4321', role: 'Librarian', status: 'Active' },
     { id: 'member_3', name: 'Charlie Brown', email: 'charlie@email.com', phone: '555-555-5555', role: 'Member', status: 'Inactive' },
 ];
 
-let mockLoans = [
+const initialLoansState = [
     { id: 'loan_1', bookId: 'book_1', memberId: 'member_1', loanDate: '2023-10-01T10:00:00Z', dueDate: '2023-10-15T10:00:00Z', returnDate: null, status: 'Overdue' },
     { id: 'loan_2', bookId: 'book_2', memberId: 'member_2', loanDate: new Date().toISOString(), dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), returnDate: null, status: 'On Loan' },
 ];
+
+
+// --- MUTABLE MOCK DATABASE (STATEFUL) ---
+// We use deep copying to allow the mock DB to be mutated during a session, but reset on sign out.
+let mockDatabase: { [key: string]: any } = JSON.parse(JSON.stringify(initialDatabaseState));
+let mockBooks = JSON.parse(JSON.stringify(initialBooksState));
+let mockMembers = JSON.parse(JSON.stringify(initialMembersState));
+let mockLoans = JSON.parse(JSON.stringify(initialLoansState));
 
 
 const api = (fn: Function) => (...args: any) => new Promise(resolve => setTimeout(() => resolve(fn(...args)), 300 + Math.random() * 300));
@@ -177,6 +184,12 @@ const authMock = {
   },
   signOut: (auth: any) => {
     return new Promise(resolve => setTimeout(() => {
+      // Reset all mock data to its initial state
+      mockDatabase = JSON.parse(JSON.stringify(initialDatabaseState));
+      mockBooks = JSON.parse(JSON.stringify(initialBooksState));
+      mockMembers = JSON.parse(JSON.stringify(initialMembersState));
+      mockLoans = JSON.parse(JSON.stringify(initialLoansState));
+        
       mockCurrentUser = null;
       localStorage.removeItem('mockUser');
       onAuthStateChangedCallback?.(null);
