@@ -76,3 +76,11 @@ export interface ToastContextType {
   showToast: (message: string, type?: 'success' | 'error') => void;
   removeToast: (id: number) => void;
 }
+
+// --- TABLE SORTING TYPES ---
+export type SortDirection = 'ascending' | 'descending';
+
+export interface SortConfig<T> {
+  key: keyof T;
+  direction: SortDirection;
+}
