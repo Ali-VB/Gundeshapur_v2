@@ -19,7 +19,7 @@ let mockDatabase: { [key: string]: any } = {
     email: "user@example.com",
     displayName: "Regular User",
     role: "user",
-    sheetId: 'user_sheet_789', // Give user a sheetId to skip setup page
+    sheetId: null, // Give user a null sheetId to show setup page
     plan: 'free',
     subscriptionStatus: 'active',
   },

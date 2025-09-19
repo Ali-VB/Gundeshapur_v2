@@ -23,11 +23,11 @@ export const LandingPage = () => {
                 {/* Hero Section */}
                 <section className="pt-40 pb-24 text-center bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]">
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                        <h1 className="text-5xl sm:text-7xl font-extrabold text-slate-100 leading-tight">
+                        <h1 className="text-4xl sm:text-7xl font-bold text-slate-100 leading-tight">
                             Simple, Powerful Library Management
                         </h1>
-                        <p className="max-w-3xl mx-auto mt-8 text-xl text-slate-400">
-                           Gundeshapur helps small libraries, clubs, and communities manage their books and members with an easy-to-use, affordable platform powered by Google Sheets.
+                        <p className="max-w-3xl  mx-auto mt-8 text-2xl text-slate-400">
+                          <span className="font-semibold  text-slate-300"> Gundeshapur </span> helps small libraries, clubs, and communities manage their books and members with an easy-to-use, affordable platform powered by Google Sheets.
                         </p>
                         <button onClick={signIn} className="mt-10 px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg hover:opacity-90 transition-opacity">
                             Start for Free Today
