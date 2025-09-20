@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useContext, createContext } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -54,6 +55,7 @@ const translations: Translations = {
     tabMembers: 'Members',
     tabLoans: 'Loans',
     tabBilling: 'Billing',
+    tabAILibrarian: 'AI Librarian',
     // Books View
     addBook: 'Add Book',
     editBook: 'Edit Book',
@@ -108,6 +110,9 @@ const translations: Translations = {
     toastMemberDeleted: 'Member deleted.',
     toastLoanAdded: 'Book lent successfully!',
     toastLoanReturned: 'Loan returned successfully!',
+    // AI Librarian
+    aiWelcomeMessage: "Hello! I'm your AI Librarian Assistant. How can I help you today? You can ask me for book suggestions, summaries, and more.",
+    aiPlaceholder: 'Ask for book suggestions, summaries, etc...',
   },
   es: {
     signOut: 'Cerrar Sesión',
@@ -148,6 +153,7 @@ const translations: Translations = {
     tabMembers: 'Miembros',
     tabLoans: 'Préstamos',
     tabBilling: 'Facturación',
+    tabAILibrarian: 'Bibliotecario IA',
     addBook: 'Añadir Libro',
     editBook: 'Editar Libro',
     searchBooks: 'Buscar libros por título, autor o ISBN...',
@@ -197,6 +203,8 @@ const translations: Translations = {
     toastMemberDeleted: 'Miembro eliminado.',
     toastLoanAdded: '¡Libro prestado con éxito!',
     toastLoanReturned: '¡Préstamo devuelto con éxito!',
+    aiWelcomeMessage: '¡Hola! Soy tu Asistente de Bibliotecario IA. ¿Cómo puedo ayudarte hoy? Puedes pedirme sugerencias de libros, resúmenes y más.',
+    aiPlaceholder: 'Pide sugerencias de libros, resúmenes, etc...',
   },
   fr: {
     signOut: 'Se Déconnecter',
@@ -237,6 +245,7 @@ const translations: Translations = {
     tabMembers: 'Membres',
     tabLoans: 'Emprunts',
     tabBilling: 'Facturation',
+    tabAILibrarian: 'Bibliothécaire IA',
     addBook: 'Ajouter un Livre',
     editBook: 'Modifier le Livre',
     searchBooks: 'Rechercher des livres par titre, auteur ou ISBN...',
@@ -286,6 +295,8 @@ const translations: Translations = {
     toastMemberDeleted: 'Membre supprimé.',
     toastLoanAdded: 'Livre prêté avec succès!',
     toastLoanReturned: 'Emprunt retourné avec succès!',
+    aiWelcomeMessage: "Bonjour! Je suis votre Assistant Bibliothécaire IA. Comment puis-je vous aider aujourd'hui? Vous pouvez me demander des suggestions de livres, des résumés, et plus encore.",
+    aiPlaceholder: 'Demandez des suggestions de livres, des résumés, etc...',
   },
 };
 
@@ -299,8 +310,11 @@ const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children })
         localStorage.setItem('locale', lang);
     };
 
-    const t = (key: keyof (typeof translations)['en']) => {
-        return translations[locale][key] || translations['en'][key];
+    // Fix: Corrected the type of the `t` function to align with `LanguageContextType`.
+    // The key parameter is now `string`, and type assertions are used to handle translation lookups,
+    // ensuring the return type is always a string.
+    const t = (key: string): string => {
+        return (translations[locale] as Record<string, string>)[key] || (translations.en as Record<string, string>)[key] || key;
     };
 
     return (
