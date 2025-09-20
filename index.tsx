@@ -449,11 +449,14 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         const result = await signInWithPopup(auth, googleProvider);
         const credential = GoogleAuthProvider.credentialFromResult(result);
         const token = credential?.accessToken;
-        if(token) {
+        if (token) {
            await gapiManager.initClient(token);
+        } else {
+           // If for some reason we don't get a token, treat it as a failure.
+           throw new Error("Authentication failed: No access token provided.");
         }
     } catch (error: any) {
-        console.error("Authentication error:", error);
+        console.error("Authentication or GAPI initialization error:", error);
         if (error.code === 'auth/popup-closed-by-user') {
             showToast(t('toastAuthCancelled'), 'error');
         } else if (error.code === 'auth/popup-blocked') {
@@ -461,6 +464,11 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         } else {
             showToast(t('toastAuthGenericError'), 'error');
         }
+        
+        // Clean up on any failure to ensure user is redirected to landing page.
+        await signOut(auth);
+        setUser(null);
+
     } finally {
         setLoading(false);
     }
