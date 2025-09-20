@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth, useTranslation } from '../../index';
+import { useAuth, useTranslation, useToast } from '../../index';
 import { User } from '../../types';
-import { getAllUsers } from '../../firebase';
+import { getAllUsers, updateUser } from '../../firebase';
 import { Logo } from '../common/Logo';
+import { ManageUserModal } from '../admin/ManageUserModal';
 
 const StatCard: React.FC<{ title: string; value: string | number; color: string }> = ({ title, value, color }) => (
     <div className={`bg-slate-800 p-5 rounded-xl border-l-4 ${color}`}>
@@ -14,8 +15,10 @@ const StatCard: React.FC<{ title: string; value: string | number; color: string 
 export const AdminPage = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+    const [managingUser, setManagingUser] = useState<User | null>(null);
     const { signOut } = useAuth();
-    const { locale } = useTranslation();
+    const { t, locale } = useTranslation();
+    const { showToast } = useToast();
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -26,6 +29,18 @@ export const AdminPage = () => {
         };
         fetchUsers();
     }, []);
+
+    const handleUpdateUser = async (uid: string, updates: Partial<User>) => {
+        try {
+            await updateUser(uid, updates);
+            setUsers(prevUsers => prevUsers.map(u => u.uid === uid ? { ...u, ...updates } : u));
+            showToast(t('toastUserUpdatedAdmin'));
+            setManagingUser(null);
+        } catch (error) {
+            console.error("Failed to update user:", error);
+            showToast('Failed to update user.', 'error');
+        }
+    };
 
     const totalUsers = users.length;
     const activeLibraries = users.filter(u => u.sheetId).length;
@@ -99,7 +114,7 @@ export const AdminPage = () => {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-base font-medium">
-                                                <button className="text-cyan-400 hover:text-cyan-300 transition">Manage</button>
+                                                <button onClick={() => setManagingUser(user)} className="text-cyan-400 hover:text-cyan-300 transition">Manage</button>
                                             </td>
                                         </tr>
                                     ))}
@@ -109,6 +124,14 @@ export const AdminPage = () => {
                     )}
                 </div>
             </main>
+
+            {managingUser && (
+                <ManageUserModal
+                    user={managingUser}
+                    onClose={() => setManagingUser(null)}
+                    onSave={handleUpdateUser}
+                />
+            )}
         </div>
     );
 };
