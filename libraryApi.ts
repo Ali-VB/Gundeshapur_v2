@@ -1,4 +1,3 @@
-
 // This file implements the Library Data API using the Google Sheets API.
 
 import { Book, Member, Loan } from './types';
@@ -10,6 +9,10 @@ const getSheetsApi = () => {
     }
     return window.gapi.client.sheets;
 }
+
+// Helper to generate a unique ID for new entries
+const generateId = () => `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
 
 // --- PARSING HELPERS ---
 // These helpers convert the raw array-of-arrays response from Google Sheets
@@ -66,10 +69,30 @@ export const getBooks = async (sheetId: string): Promise<Book[]> => {
     });
     return parseBooks(response.result.values || []);
 };
-export const addBook = async (sheetId: string, bookData: Omit<Book, 'id'>): Promise<any> => {
-    console.log("TODO: Implement addBook", { sheetId, bookData });
-    // This would use `spreadsheets.values.append`
-    return Promise.resolve();
+export const addBook = async (sheetId: string, bookData: Omit<Book, 'id' | 'availableCopies'> & { availableCopies: number }): Promise<any> => {
+    const newId = generateId();
+    const newRow = [
+        newId,
+        bookData.title,
+        bookData.author,
+        bookData.year,
+        bookData.isbn,
+        bookData.publisher,
+        bookData.language,
+        bookData.ddc,
+        bookData.tags.join(', '),
+        bookData.totalCopies,
+        bookData.availableCopies
+    ];
+
+    return getSheetsApi().spreadsheets.values.append({
+        spreadsheetId: sheetId,
+        range: 'Books!A:K',
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+            values: [newRow],
+        },
+    });
 };
 export const updateBook = async (sheetId: string, bookId: string, updates: Partial<Book>): Promise<any> => {
     console.log("TODO: Implement updateBook", { sheetId, bookId, updates });
@@ -91,8 +114,23 @@ export const getMembers = async (sheetId: string): Promise<Member[]> => {
     return parseMembers(response.result.values || []);
 };
 export const addMember = async (sheetId: string, memberData: Omit<Member, 'id'>): Promise<any> => {
-    console.log("TODO: Implement addMember", { sheetId, memberData });
-    return Promise.resolve();
+    const newId = generateId();
+    const newRow = [
+        newId,
+        memberData.name,
+        memberData.email,
+        memberData.phone,
+        memberData.role,
+        memberData.status,
+    ];
+    return getSheetsApi().spreadsheets.values.append({
+        spreadsheetId: sheetId,
+        range: 'Members!A:F',
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+            values: [newRow],
+        },
+    });
 };
 export const updateMember = async (sheetId: string, memberId: string, updates: Partial<Member>): Promise<any> => {
     console.log("TODO: Implement updateMember", { sheetId, memberId, updates });
@@ -112,9 +150,33 @@ export const getLoans = async (sheetId: string): Promise<Loan[]> => {
     return parseLoans(response.result.values || []);
 };
 export const addLoan = async (sheetId: string, loanData: { bookId: string; memberId: string }): Promise<any> => {
-    console.log("TODO: Implement addLoan", { sheetId, loanData });
-    // This would also require updating the availableCopies count in the Books sheet.
-    return Promise.resolve();
+    const newId = generateId();
+    const loanDate = new Date();
+    const dueDate = new Date();
+    dueDate.setDate(loanDate.getDate() + 14); // 2 week loan period
+
+    const newRow = [
+        newId,
+        loanData.bookId,
+        loanData.memberId,
+        loanDate.toISOString(),
+        dueDate.toISOString(),
+        null, // Return date is null
+        'On Loan',
+    ];
+
+    // TODO: This should be a transactional update. After adding the loan,
+    // we must find the corresponding book in the 'Books' sheet and decrement
+    // its 'availableCopies' count. This is complex to do robustly on the client-side.
+    
+    return getSheetsApi().spreadsheets.values.append({
+        spreadsheetId: sheetId,
+        range: 'Loans!A:G',
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+            values: [newRow],
+        },
+    });
 };
 export const returnLoan = async (sheetId: string, loanId: string): Promise<any> => {
     console.log("TODO: Implement returnLoan", { sheetId, loanId });
