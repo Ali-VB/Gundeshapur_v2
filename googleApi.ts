@@ -1,6 +1,5 @@
 
 import { googleApiConfig } from './config';
-import { log } from './loggingService';
 
 declare global {
   interface Window {
@@ -59,52 +58,43 @@ export const gapiManager = new GapiManager();
 
 // --- NEW FUNCTION to create and format a spreadsheet ---
 export const createSpreadsheet = async (title: string): Promise<string | null> => {
-    try {
-        log.addLog('INFO', `Attempting to create spreadsheet with title: "${title}"`);
-        const sheetsApi = getSheetsApi();
+    const sheetsApi = getSheetsApi();
 
-        // 1. Create the spreadsheet
-        const spreadsheet = await sheetsApi.spreadsheets.create({
-            properties: { title: title || 'Gundeshapur Library' }
-        });
-        const spreadsheetId = spreadsheet.result.spreadsheetId;
-        if (!spreadsheetId) {
-            throw new Error("Spreadsheet creation failed, no ID returned.");
-        }
-        log.addLog('INFO', `Spreadsheet created with ID: ${spreadsheetId}`);
-
-        // 2. Add and rename sheets
-        const batchUpdateSheetRequest = {
-            requests: [
-                { updateSheetProperties: { properties: { sheetId: 0, title: 'Books' }, fields: 'title' }},
-                { addSheet: { properties: { title: 'Members' } } },
-                { addSheet: { properties: { title: 'Loans' } } },
-            ]
-        };
-        await sheetsApi.spreadsheets.batchUpdate({
-            spreadsheetId,
-            resource: batchUpdateSheetRequest
-        });
-        log.addLog('INFO', `Formatted sheets (Books, Members, Loans) for spreadsheet ID: ${spreadsheetId}`);
-
-        // 3. Add headers to all sheets
-        const batchUpdateValuesRequest = {
-            valueInputOption: 'USER_ENTERED',
-            data: [
-                { range: 'Books!A1', values: [['id', 'title', 'author', 'year', 'isbn', 'publisher', 'language', 'ddc', 'tags', 'totalCopies', 'availableCopies']] },
-                { range: 'Members!A1', values: [['id', 'name', 'email', 'phone', 'role', 'status']] },
-                { range: 'Loans!A1', values: [['id', 'bookId', 'memberId', 'loanDate', 'dueDate', 'returnDate', 'status']] }
-            ]
-        };
-        await sheetsApi.spreadsheets.values.batchUpdate({
-            spreadsheetId,
-            resource: batchUpdateValuesRequest
-        });
-        log.addLog('INFO', `Added headers to all sheets for spreadsheet ID: ${spreadsheetId}`);
-        
-        return spreadsheetId;
-    } catch (e: any) {
-        log.addLog('ERROR', `Failed to create spreadsheet: ${e.message}`);
-        throw e;
+    // 1. Create the spreadsheet
+    const spreadsheet = await sheetsApi.spreadsheets.create({
+        properties: { title: title || 'Gundeshapur Library' }
+    });
+    const spreadsheetId = spreadsheet.result.spreadsheetId;
+    if (!spreadsheetId) {
+        throw new Error("Spreadsheet creation failed, no ID returned.");
     }
+
+    // 2. Add and rename sheets
+    const batchUpdateSheetRequest = {
+        requests: [
+            { updateSheetProperties: { properties: { sheetId: 0, title: 'Books' }, fields: 'title' }},
+            { addSheet: { properties: { title: 'Members' } } },
+            { addSheet: { properties: { title: 'Loans' } } },
+        ]
+    };
+    await sheetsApi.spreadsheets.batchUpdate({
+        spreadsheetId,
+        resource: batchUpdateSheetRequest
+    });
+
+    // 3. Add headers to all sheets
+    const batchUpdateValuesRequest = {
+        valueInputOption: 'USER_ENTERED',
+        data: [
+            { range: 'Books!A1', values: [['id', 'title', 'author', 'year', 'isbn', 'publisher', 'language', 'ddc', 'tags', 'totalCopies', 'availableCopies']] },
+            { range: 'Members!A1', values: [['id', 'name', 'email', 'phone', 'role', 'status']] },
+            { range: 'Loans!A1', values: [['id', 'bookId', 'memberId', 'loanDate', 'dueDate', 'returnDate', 'status']] }
+        ]
+    };
+    await sheetsApi.spreadsheets.values.batchUpdate({
+        spreadsheetId,
+        resource: batchUpdateValuesRequest
+    });
+    
+    return spreadsheetId;
 };

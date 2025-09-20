@@ -2,7 +2,6 @@
 
 import { Book, Member, Loan } from './types';
 import { getSheetsApi } from './googleApi';
-import { log } from './loggingService';
 
 // Helper to generate a unique ID for new entries
 const generateId = () => `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -65,258 +64,178 @@ const parseLoans = (values: any[][]): Loan[] => {
 
 // --- BOOKS API ---
 export const getBooks = async (sheetId: string): Promise<Book[]> => {
-    try {
-        log.addLog('INFO', `Fetching books from sheet: ${sheetId}`);
-        const response = await getSheetsApi().spreadsheets.values.get({
-            spreadsheetId: sheetId, range: 'Books!A2:K',
-        });
-        const books = parseBooks(response.result.values || []);
-        log.addLog('INFO', `Successfully fetched ${books.length} books.`);
-        return books;
-    } catch(e: any) {
-        log.addLog('ERROR', `Failed to fetch books: ${e.message}`);
-        throw e;
-    }
+    const response = await getSheetsApi().spreadsheets.values.get({
+        spreadsheetId: sheetId, range: 'Books!A2:K',
+    });
+    return parseBooks(response.result.values || []);
 };
 
 export const addBook = async (sheetId: string, bookData: Omit<Book, 'id' | 'availableCopies'> & { availableCopies: number }): Promise<any> => {
-    try {
-        const newRow = [
-            generateId(), bookData.title, bookData.author, bookData.year, bookData.isbn,
-            bookData.publisher, bookData.language, bookData.ddc, bookData.tags.join(', '),
-            bookData.totalCopies, bookData.availableCopies
-        ];
-        const result = await getSheetsApi().spreadsheets.values.append({
-            spreadsheetId: sheetId, range: 'Books!A:K', valueInputOption: 'USER_ENTERED',
-            resource: { values: [newRow] },
-        });
-        log.addLog('INFO', `Added new book: "${bookData.title}"`);
-        return result;
-    } catch(e: any) {
-        log.addLog('ERROR', `Failed to add book "${bookData.title}": ${e.message}`);
-        throw e;
-    }
+    const newRow = [
+        generateId(), bookData.title, bookData.author, bookData.year, bookData.isbn,
+        bookData.publisher, bookData.language, bookData.ddc, bookData.tags.join(', '),
+        bookData.totalCopies, bookData.availableCopies
+    ];
+    return getSheetsApi().spreadsheets.values.append({
+        spreadsheetId: sheetId, range: 'Books!A:K', valueInputOption: 'USER_ENTERED',
+        resource: { values: [newRow] },
+    });
 };
 
 export const updateBook = async (sheetId: string, bookId: string, updates: Partial<Book>): Promise<any> => {
-    try {
-        const rowIndex = await findRowIndexById(sheetId, 'Books', bookId);
-        if (rowIndex === -1) throw new Error("Book not found for update.");
+    const rowIndex = await findRowIndexById(sheetId, 'Books', bookId);
+    if (rowIndex === -1) throw new Error("Book not found for update.");
 
-        const getResponse = await getSheetsApi().spreadsheets.values.get({ spreadsheetId: sheetId, range: `Books!A${rowIndex}:K${rowIndex}` });
-        if (!getResponse.result.values?.[0]) throw new Error("Could not retrieve current book data.");
-        
-        const currentBook = parseBooks(getResponse.result.values)[0];
-        const updatedBook = { ...currentBook, ...updates, id: bookId };
+    const getResponse = await getSheetsApi().spreadsheets.values.get({ spreadsheetId: sheetId, range: `Books!A${rowIndex}:K${rowIndex}` });
+    if (!getResponse.result.values?.[0]) throw new Error("Could not retrieve current book data.");
+    
+    const currentBook = parseBooks(getResponse.result.values)[0];
+    const updatedBook = { ...currentBook, ...updates, id: bookId };
 
-        const updatedRow = [
-            updatedBook.id, updatedBook.title, updatedBook.author, updatedBook.year, updatedBook.isbn,
-            updatedBook.publisher, updatedBook.language, updatedBook.ddc, updatedBook.tags.join(', '),
-            updatedBook.totalCopies, updatedBook.availableCopies
-        ];
-        
-        const result = await getSheetsApi().spreadsheets.values.update({
-            spreadsheetId: sheetId, range: `Books!A${rowIndex}:K${rowIndex}`, valueInputOption: 'USER_ENTERED',
-            resource: { values: [updatedRow] },
-        });
-        log.addLog('INFO', `Updated book: "${updatedBook.title}" (ID: ${bookId})`);
-        return result;
-    } catch (e: any) {
-        log.addLog('ERROR', `Failed to update book (ID: ${bookId}): ${e.message}`);
-        throw e;
-    }
+    const updatedRow = [
+        updatedBook.id, updatedBook.title, updatedBook.author, updatedBook.year, updatedBook.isbn,
+        updatedBook.publisher, updatedBook.language, updatedBook.ddc, updatedBook.tags.join(', '),
+        updatedBook.totalCopies, updatedBook.availableCopies
+    ];
+    
+    return getSheetsApi().spreadsheets.values.update({
+        spreadsheetId: sheetId, range: `Books!A${rowIndex}:K${rowIndex}`, valueInputOption: 'USER_ENTERED',
+        resource: { values: [updatedRow] },
+    });
 };
 
 export const deleteBook = async (sheetId: string, bookId: string): Promise<any> => {
-    try {
-        const numericSheetId = await getNumericSheetId(sheetId, 'Books');
-        const rowIndex = await findRowIndexById(sheetId, 'Books', bookId);
-        if (numericSheetId === null || rowIndex === -1) throw new Error("Book not found or sheet metadata error.");
+    const numericSheetId = await getNumericSheetId(sheetId, 'Books');
+    const rowIndex = await findRowIndexById(sheetId, 'Books', bookId);
+    if (numericSheetId === null || rowIndex === -1) throw new Error("Book not found or sheet metadata error.");
 
-        const result = await getSheetsApi().spreadsheets.batchUpdate({
-            spreadsheetId: sheetId,
-            resource: { requests: [{ deleteDimension: { range: {
-                sheetId: numericSheetId, dimension: 'ROWS', startIndex: rowIndex - 1, endIndex: rowIndex,
-            }}}]},
-        });
-        log.addLog('INFO', `Deleted book (ID: ${bookId})`);
-        return result;
-    } catch(e: any) {
-        log.addLog('ERROR', `Failed to delete book (ID: ${bookId}): ${e.message}`);
-        throw e;
-    }
+    return getSheetsApi().spreadsheets.batchUpdate({
+        spreadsheetId: sheetId,
+        resource: { requests: [{ deleteDimension: { range: {
+            sheetId: numericSheetId, dimension: 'ROWS', startIndex: rowIndex - 1, endIndex: rowIndex,
+        }}}]},
+    });
 };
 
 // --- MEMBERS API ---
 export const getMembers = async (sheetId: string): Promise<Member[]> => {
-    try {
-        log.addLog('INFO', `Fetching members from sheet: ${sheetId}`);
-        const response = await getSheetsApi().spreadsheets.values.get({
-            spreadsheetId: sheetId, range: 'Members!A2:F',
-        });
-        const members = parseMembers(response.result.values || []);
-        log.addLog('INFO', `Successfully fetched ${members.length} members.`);
-        return members;
-    } catch(e: any) {
-        log.addLog('ERROR', `Failed to fetch members: ${e.message}`);
-        throw e;
-    }
+    const response = await getSheetsApi().spreadsheets.values.get({
+        spreadsheetId: sheetId, range: 'Members!A2:F',
+    });
+    return parseMembers(response.result.values || []);
 };
 
 export const addMember = async (sheetId: string, memberData: Omit<Member, 'id'>): Promise<any> => {
-    try {
-        const newRow = [ generateId(), memberData.name, memberData.email, memberData.phone, memberData.role, memberData.status ];
-        const result = await getSheetsApi().spreadsheets.values.append({
-            spreadsheetId: sheetId, range: 'Members!A:F', valueInputOption: 'USER_ENTERED',
-            resource: { values: [newRow] },
-        });
-        log.addLog('INFO', `Added new member: "${memberData.name}"`);
-        return result;
-    } catch(e: any) {
-        log.addLog('ERROR', `Failed to add member "${memberData.name}": ${e.message}`);
-        throw e;
-    }
+    const newRow = [ generateId(), memberData.name, memberData.email, memberData.phone, memberData.role, memberData.status ];
+    return getSheetsApi().spreadsheets.values.append({
+        spreadsheetId: sheetId, range: 'Members!A:F', valueInputOption: 'USER_ENTERED',
+        resource: { values: [newRow] },
+    });
 };
 
 export const updateMember = async (sheetId: string, memberId: string, updates: Partial<Member>): Promise<any> => {
-    try {
-        const rowIndex = await findRowIndexById(sheetId, 'Members', memberId);
-        if (rowIndex === -1) throw new Error("Member not found for update.");
+    const rowIndex = await findRowIndexById(sheetId, 'Members', memberId);
+    if (rowIndex === -1) throw new Error("Member not found for update.");
 
-        const getResponse = await getSheetsApi().spreadsheets.values.get({ spreadsheetId: sheetId, range: `Members!A${rowIndex}:F${rowIndex}` });
-        if (!getResponse.result.values?.[0]) throw new Error("Could not retrieve current member data.");
-        
-        const currentMember = parseMembers(getResponse.result.values)[0];
-        const updatedMember = { ...currentMember, ...updates, id: memberId };
-        
-        const updatedRow = [ updatedMember.id, updatedMember.name, updatedMember.email, updatedMember.phone, updatedMember.role, updatedMember.status ];
+    const getResponse = await getSheetsApi().spreadsheets.values.get({ spreadsheetId: sheetId, range: `Members!A${rowIndex}:F${rowIndex}` });
+    if (!getResponse.result.values?.[0]) throw new Error("Could not retrieve current member data.");
+    
+    const currentMember = parseMembers(getResponse.result.values)[0];
+    const updatedMember = { ...currentMember, ...updates, id: memberId };
+    
+    const updatedRow = [ updatedMember.id, updatedMember.name, updatedMember.email, updatedMember.phone, updatedMember.role, updatedMember.status ];
 
-        const result = await getSheetsApi().spreadsheets.values.update({
-            spreadsheetId: sheetId, range: `Members!A${rowIndex}:F${rowIndex}`, valueInputOption: 'USER_ENTERED',
-            resource: { values: [updatedRow] },
-        });
-        log.addLog('INFO', `Updated member: "${updatedMember.name}" (ID: ${memberId})`);
-        return result;
-    } catch(e: any) {
-        log.addLog('ERROR', `Failed to update member (ID: ${memberId}): ${e.message}`);
-        throw e;
-    }
+    return getSheetsApi().spreadsheets.values.update({
+        spreadsheetId: sheetId, range: `Members!A${rowIndex}:F${rowIndex}`, valueInputOption: 'USER_ENTERED',
+        resource: { values: [updatedRow] },
+    });
 };
 
 export const deleteMember = async (sheetId: string, memberId: string): Promise<any> => {
-    try {
-        const numericSheetId = await getNumericSheetId(sheetId, 'Members');
-        const rowIndex = await findRowIndexById(sheetId, 'Members', memberId);
-        if (numericSheetId === null || rowIndex === -1) throw new Error("Member not found or sheet metadata error.");
+    const numericSheetId = await getNumericSheetId(sheetId, 'Members');
+    const rowIndex = await findRowIndexById(sheetId, 'Members', memberId);
+    if (numericSheetId === null || rowIndex === -1) throw new Error("Member not found or sheet metadata error.");
 
-        const result = await getSheetsApi().spreadsheets.batchUpdate({
-            spreadsheetId: sheetId,
-            resource: { requests: [{ deleteDimension: { range: {
-                sheetId: numericSheetId, dimension: 'ROWS', startIndex: rowIndex - 1, endIndex: rowIndex,
-            }}}]},
-        });
-        log.addLog('INFO', `Deleted member (ID: ${memberId})`);
-        return result;
-    } catch(e: any) {
-        log.addLog('ERROR', `Failed to delete member (ID: ${memberId}): ${e.message}`);
-        throw e;
-    }
+    return getSheetsApi().spreadsheets.batchUpdate({
+        spreadsheetId: sheetId,
+        resource: { requests: [{ deleteDimension: { range: {
+            sheetId: numericSheetId, dimension: 'ROWS', startIndex: rowIndex - 1, endIndex: rowIndex,
+        }}}]},
+    });
 };
 
 // --- LOANS API ---
 export const getLoans = async (sheetId: string): Promise<Loan[]> => {
-    try {
-        log.addLog('INFO', `Fetching loans from sheet: ${sheetId}`);
-        const response = await getSheetsApi().spreadsheets.values.get({
-            spreadsheetId: sheetId, range: 'Loans!A2:G',
-        });
-        const loans = parseLoans(response.result.values || []);
-        log.addLog('INFO', `Successfully fetched ${loans.length} loans.`);
-        return loans;
-    } catch(e: any) {
-        log.addLog('ERROR', `Failed to fetch loans: ${e.message}`);
-        throw e;
-    }
+    const response = await getSheetsApi().spreadsheets.values.get({
+        spreadsheetId: sheetId, range: 'Loans!A2:G',
+    });
+    return parseLoans(response.result.values || []);
 };
 
 export const addLoan = async (sheetId: string, loanData: { bookId: string; memberId: string }): Promise<any> => {
-    try {
-        const bookRowIndex = await findRowIndexById(sheetId, 'Books', loanData.bookId);
-        if (bookRowIndex === -1) throw new Error(`Book with ID ${loanData.bookId} not found.`);
+    const bookRowIndex = await findRowIndexById(sheetId, 'Books', loanData.bookId);
+    if (bookRowIndex === -1) throw new Error(`Book with ID ${loanData.bookId} not found.`);
 
-        const getBookResponse = await getSheetsApi().spreadsheets.values.get({ spreadsheetId: sheetId, range: `Books!A${bookRowIndex}:K${bookRowIndex}` });
-        const book = parseBooks(getBookResponse.result.values || [])[0];
-        if (!book) throw new Error(`Could not retrieve book data for ID ${loanData.bookId}`);
-        if (book.availableCopies <= 0) throw new Error(`No available copies of "${book.title}" to loan.`);
-        
+    const getBookResponse = await getSheetsApi().spreadsheets.values.get({ spreadsheetId: sheetId, range: `Books!A${bookRowIndex}:K${bookRowIndex}` });
+    const book = parseBooks(getBookResponse.result.values || [])[0];
+    if (!book) throw new Error(`Could not retrieve book data for ID ${loanData.bookId}`);
+    if (book.availableCopies <= 0) throw new Error(`No available copies of "${book.title}" to loan.`);
+    
+    await getSheetsApi().spreadsheets.values.update({
+        spreadsheetId: sheetId, range: `Books!K${bookRowIndex}`, valueInputOption: 'USER_ENTERED',
+        resource: { values: [[book.availableCopies - 1]] },
+    });
+    
+    const loanDate = new Date();
+    const dueDate = new Date();
+    dueDate.setDate(loanDate.getDate() + 14); // 2 week loan period
+    const newRow = [ generateId(), loanData.bookId, loanData.memberId, loanDate.toISOString(), dueDate.toISOString(), null, 'On Loan' ];
+
+    try {
+        return await getSheetsApi().spreadsheets.values.append({
+            spreadsheetId: sheetId, range: 'Loans!A:G', valueInputOption: 'USER_ENTERED',
+            resource: { values: [newRow] },
+        });
+    } catch (error) {
+        console.error("Failed to add loan, reverting book count.", error);
         await getSheetsApi().spreadsheets.values.update({
             spreadsheetId: sheetId, range: `Books!K${bookRowIndex}`, valueInputOption: 'USER_ENTERED',
-            resource: { values: [[book.availableCopies - 1]] },
+            resource: { values: [[book.availableCopies]] },
         });
-        
-        const loanDate = new Date();
-        const dueDate = new Date();
-        dueDate.setDate(loanDate.getDate() + 14); // 2 week loan period
-        const newRow = [ generateId(), loanData.bookId, loanData.memberId, loanDate.toISOString(), dueDate.toISOString(), null, 'On Loan' ];
-
-        try {
-            const result = await getSheetsApi().spreadsheets.values.append({
-                spreadsheetId: sheetId, range: 'Loans!A:G', valueInputOption: 'USER_ENTERED',
-                resource: { values: [newRow] },
-            });
-            log.addLog('INFO', `Added new loan for book "${book.title}"`);
-            return result;
-        } catch (error) {
-            log.addLog('ERROR', `Failed to add loan, reverting book count for "${book.title}". Error: ${error}`);
-            await getSheetsApi().spreadsheets.values.update({
-                spreadsheetId: sheetId, range: `Books!K${bookRowIndex}`, valueInputOption: 'USER_ENTERED',
-                resource: { values: [[book.availableCopies]] },
-            });
-            throw error;
-        }
-    } catch(e: any) {
-        log.addLog('ERROR', `Failed to process new loan: ${e.message}`);
-        throw e;
+        throw error;
     }
 };
 
 export const returnLoan = async (sheetId: string, loanId: string): Promise<any> => {
-    try {
-        const loanRowIndex = await findRowIndexById(sheetId, 'Loans', loanId);
-        if (loanRowIndex === -1) throw new Error("Loan not found.");
+    const loanRowIndex = await findRowIndexById(sheetId, 'Loans', loanId);
+    if (loanRowIndex === -1) throw new Error("Loan not found.");
 
-        const getLoanResponse = await getSheetsApi().spreadsheets.values.get({ spreadsheetId: sheetId, range: `Loans!A${loanRowIndex}:G${loanRowIndex}`});
-        const loan = parseLoans(getLoanResponse.result.values || [])[0];
-        if (!loan) throw new Error("Could not retrieve current loan data.");
-        if (loan.status === 'Returned') return; // Already returned
+    const getLoanResponse = await getSheetsApi().spreadsheets.values.get({ spreadsheetId: sheetId, range: `Loans!A${loanRowIndex}:G${loanRowIndex}`});
+    const loan = parseLoans(getLoanResponse.result.values || [])[0];
+    if (!loan) throw new Error("Could not retrieve current loan data.");
+    if (loan.status === 'Returned') return; // Already returned
 
-        const updatedLoanRow = [ loan.id, loan.bookId, loan.memberId, loan.loanDate, loan.dueDate, new Date().toISOString(), 'Returned' ];
-        await getSheetsApi().spreadsheets.values.update({
-            spreadsheetId: sheetId, range: `Loans!A${loanRowIndex}:G${loanRowIndex}`, valueInputOption: 'USER_ENTERED',
-            resource: { values: [updatedLoanRow] },
-        });
+    const updatedLoanRow = [ loan.id, loan.bookId, loan.memberId, loan.loanDate, loan.dueDate, new Date().toISOString(), 'Returned' ];
+    await getSheetsApi().spreadsheets.values.update({
+        spreadsheetId: sheetId, range: `Loans!A${loanRowIndex}:G${loanRowIndex}`, valueInputOption: 'USER_ENTERED',
+        resource: { values: [updatedLoanRow] },
+    });
 
-        log.addLog('INFO', `Returned loan (ID: ${loanId})`);
-
-        const bookRowIndex = await findRowIndexById(sheetId, 'Books', loan.bookId);
-        if (bookRowIndex === -1) {
-            log.addLog('ERROR', `Could not find book ${loan.bookId} to update copy count on return.`);
-            return;
-        }
-
-        const getBookResponse = await getSheetsApi().spreadsheets.values.get({ spreadsheetId: sheetId, range: `Books!A${bookRowIndex}:K${bookRowIndex}`});
-        const book = parseBooks(getBookResponse.result.values || [])[0];
-        if (!book) {
-            log.addLog('ERROR', `Could not parse book data for ${loan.bookId} on return.`);
-            return;
-        }
-        
-        return getSheetsApi().spreadsheets.values.update({
-            spreadsheetId: sheetId, range: `Books!K${bookRowIndex}`, valueInputOption: 'USER_ENTERED',
-            resource: { values: [[book.availableCopies + 1]] },
-        });
-    } catch(e: any) {
-        log.addLog('ERROR', `Failed to return loan (ID: ${loanId}): ${e.message}`);
-        throw e;
+    const bookRowIndex = await findRowIndexById(sheetId, 'Books', loan.bookId);
+    if (bookRowIndex === -1) {
+        console.warn(`Could not find book ${loan.bookId} to update copy count.`);
+        return;
     }
+
+    const getBookResponse = await getSheetsApi().spreadsheets.values.get({ spreadsheetId: sheetId, range: `Books!A${bookRowIndex}:K${bookRowIndex}`});
+    const book = parseBooks(getBookResponse.result.values || [])[0];
+    if (!book) {
+        console.warn(`Could not parse book data for ${loan.bookId}`);
+        return;
+    }
+    
+    return getSheetsApi().spreadsheets.values.update({
+        spreadsheetId: sheetId, range: `Books!K${bookRowIndex}`, valueInputOption: 'USER_ENTERED',
+        resource: { values: [[book.availableCopies + 1]] },
+    });
 };

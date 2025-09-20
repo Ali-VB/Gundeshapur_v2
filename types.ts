@@ -7,7 +7,6 @@ export interface User {
   plan: 'free' | 'pro' | 'enterprise';
   subscriptionStatus: 'active' | 'canceled' | 'past_due';
   libraryName?: string;
-  lastLogin?: string;
 }
 
 export interface AuthContextType {
@@ -84,27 +83,4 @@ export type SortDirection = 'ascending' | 'descending';
 export interface SortConfig<T> {
   key: keyof T;
   direction: SortDirection;
-}
-
-// --- ADMIN PANEL TYPES ---
-export interface Subscription {
-    id: string;
-    userId: string;
-    userEmail: string;
-    plan: 'free' | 'pro' | 'enterprise';
-    status: 'active' | 'past_due' | 'canceled';
-    currentPeriodStart: string;
-    currentPeriodEnd: string;
-}
-
-export type LogType = 'INFO' | 'ERROR' | 'BUG';
-
-export interface LogEntry {
-    id: number;
-    timestamp: string;
-    type: LogType;
-    message: string;
-    user?: {
-        email: string;
-    };
 }
