@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useContext, createContext } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -27,11 +25,21 @@ const translations: Translations = {
     loginSubtitle: 'Simple, affordable library management for your community.',
     loginButton: 'Sign In with Google',
     // Admin Page
-    adminTitle: 'Admin Panel - User Management',
+    adminTitle: 'Admin Panel',
     adminDisplayName: 'Display Name',
     adminEmail: 'Email',
     adminPlan: 'Plan',
     adminStatus: 'Status',
+    adminSheetId: 'Sheet ID',
+    adminNavDashboard: 'Dashboard',
+    adminNavUsers: 'Users',
+    adminNavSubscriptions: 'Subscriptions',
+    adminNavLogs: 'Logs & Usage',
+    adminNavBugs: 'Bug Reports',
+    manageUser: 'Manage User',
+    changePlan: 'Change Plan',
+    changeRole: 'Change Role',
+    toastUserUpdatedAdmin: 'User updated successfully!',
     // Setup Page
     setupTitle: "Welcome! Let's set up your library.",
     setupSubtitle: "Connect your library's data source to get started.",
@@ -127,11 +135,21 @@ const translations: Translations = {
     loginTitle: 'Gestor de Biblioteca Gundeshapur',
     loginSubtitle: 'Gestión de bibliotecas simple y asequible para tu comunidad.',
     loginButton: 'Iniciar Sesión con Google',
-    adminTitle: 'Panel de Admin - Gestión de Usuarios',
+    adminTitle: 'Panel de Admin',
     adminDisplayName: 'Nombre',
     adminEmail: 'Correo Electrónico',
     adminPlan: 'Plan',
     adminStatus: 'Estado',
+    adminSheetId: 'ID de Hoja',
+    adminNavDashboard: 'Dashboard',
+    adminNavUsers: 'Usuarios',
+    adminNavSubscriptions: 'Suscripciones',
+    adminNavLogs: 'Logs y Uso',
+    adminNavBugs: 'Informes de Errores',
+    manageUser: 'Gestionar Usuario',
+    changePlan: 'Cambiar Plan',
+    changeRole: 'Cambiar Rol',
+    toastUserUpdatedAdmin: '¡Usuario actualizado con éxito!',
     setupTitle: '¡Bienvenido! Configuremos tu biblioteca.',
     setupSubtitle: 'Conecta la fuente de datos de tu biblioteca para comenzar.',
     setupOpt1Title: 'Opción 1: Crear una Nueva Hoja',
@@ -219,11 +237,21 @@ const translations: Translations = {
     loginTitle: 'Gestionnaire de Bibliothèque Gundeshapur',
     loginSubtitle: 'Gestion de bibliothèque simple et abordable pour votre communauté.',
     loginButton: 'Se Connecter avec Google',
-    adminTitle: "Panneau d'Administration - Gestion des Utilisateurs",
+    adminTitle: "Panneau d'Administration",
     adminDisplayName: "Nom d'Affichage",
     adminEmail: 'Email',
     adminPlan: 'Forfait',
     adminStatus: 'Statut',
+    adminSheetId: 'ID de Feuille',
+    adminNavDashboard: 'Tableau de bord',
+    adminNavUsers: 'Utilisateurs',
+    adminNavSubscriptions: 'Abonnements',
+    adminNavLogs: 'Logs & Utilisation',
+    adminNavBugs: 'Rapports de Bugs',
+    manageUser: "Gérer l'utilisateur",
+    changePlan: 'Changer de forfait',
+    changeRole: 'Changer de rôle',
+    toastUserUpdatedAdmin: 'Utilisateur mis à jour avec succès !',
     setupTitle: 'Bienvenue! Configurons votre bibliothèque.',
     setupSubtitle: 'Connectez la source de données de votre bibliothèque pour commencer.',
     setupOpt1Title: 'Option 1: Créer une Nouvelle Feuille',
@@ -378,10 +406,16 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       if (firebaseUser) {
         const userRef = doc(db, 'users', firebaseUser.uid);
         const userDoc = await getDoc(userRef);
+        const lastLoginTime = new Date().toISOString();
 
         if (userDoc.exists()) {
+          // Existing user: update their last login time.
+          // The user object in the app's state doesn't need this immediately,
+          // as the Admin Panel will fetch the latest data directly.
+          await setDoc(userRef, { lastLogin: lastLoginTime }, { merge: true });
           setUser(userDoc.data() as User);
         } else {
+          // New user: create the full user document with the last login time.
           const isSuperAdmin = firebaseUser.email === SUPER_ADMIN_EMAIL;
           const newUser: User = {
             uid: firebaseUser.uid,
@@ -391,6 +425,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             sheetId: null,
             plan: 'free',
             subscriptionStatus: 'active',
+            lastLogin: lastLoginTime,
           };
           await setDoc(userRef, newUser);
           setUser(newUser);

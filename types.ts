@@ -7,6 +7,7 @@ export interface User {
   plan: 'free' | 'pro' | 'enterprise';
   subscriptionStatus: 'active' | 'canceled' | 'past_due';
   libraryName?: string;
+  lastLogin?: string;
 }
 
 export interface AuthContextType {
