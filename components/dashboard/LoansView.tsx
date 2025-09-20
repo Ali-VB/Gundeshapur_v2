@@ -1,7 +1,6 @@
 
 
 import React, { useState, useMemo } from 'react';
-// FIX: Import useAuth to access the user's sheetId for API calls.
 import { useTranslation, useToast, useAuth } from '../../index';
 import { Loan, Book, Member } from '../../types';
 import * as libraryApi from '../../libraryApi';
@@ -14,7 +13,6 @@ import { SortIcon } from '../common/Icons';
 export const LoansView: React.FC<{ loans: Loan[]; books: Book[]; members: Member[]; onUpdate: () => void }> = ({ loans, books, members, onUpdate }) => {
     const { t, locale } = useTranslation();
     const { showToast } = useToast();
-    // FIX: Get user from auth context to use sheetId.
     const { user } = useAuth();
     const [search, setSearch] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -37,16 +35,18 @@ export const LoansView: React.FC<{ loans: Loan[]; books: Book[]; members: Member
 
     const handleSaveLoan = async (loanData: { bookId: string; memberId: string; }) => {
         if (!user?.sheetId) return;
-        // FIX: Pass sheetId to addLoan. Expected 2 arguments.
-        await libraryApi.addLoan(user.sheetId, loanData);
-        showToast(t('toastLoanAdded'));
-        setIsModalOpen(false);
-        onUpdate();
+        try {
+            await libraryApi.addLoan(user.sheetId, loanData);
+            showToast(t('toastLoanAdded'));
+            setIsModalOpen(false);
+            onUpdate();
+        } catch (error: any) {
+            showToast(error.message, 'error');
+        }
     };
 
     const handleReturnLoan = async (loanId: string) => {
         if (!user?.sheetId) return;
-        // FIX: Pass sheetId to returnLoan. Expected 2 arguments.
         await libraryApi.returnLoan(user.sheetId, loanId);
         showToast(t('toastLoanReturned'));
         onUpdate();

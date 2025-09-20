@@ -1,7 +1,6 @@
 
 
 import React, { useState, useMemo } from 'react';
-// FIX: Import useAuth to access the user's sheetId for API calls.
 import { useTranslation, useToast, useAuth } from '../../index';
 import { Book } from '../../types';
 import * as libraryApi from '../../libraryApi';
@@ -14,7 +13,6 @@ import { SortIcon } from '../common/Icons';
 export const BooksView: React.FC<{ books: Book[]; onUpdate: () => void }> = ({ books, onUpdate }) => {
     const { t } = useTranslation();
     const { showToast } = useToast();
-    // FIX: Get user from auth context to use sheetId.
     const { user } = useAuth();
     const [search, setSearch] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,12 +30,10 @@ export const BooksView: React.FC<{ books: Book[]; onUpdate: () => void }> = ({ b
     const handleSaveBook = async (bookData: any) => {
         if (!user?.sheetId) return;
         if (editingBook) {
-            // FIX: Pass sheetId to updateBook. Expected 3 arguments.
             await libraryApi.updateBook(user.sheetId, editingBook.id, bookData);
             showToast(t('toastBookUpdated'));
         } else {
             const newBook = { ...bookData, availableCopies: bookData.totalCopies };
-            // FIX: Pass sheetId to addBook. Expected 2 arguments.
             await libraryApi.addBook(user.sheetId, newBook);
             showToast(t('toastBookAdded'));
         }
@@ -47,7 +43,6 @@ export const BooksView: React.FC<{ books: Book[]; onUpdate: () => void }> = ({ b
 
     const handleDeleteBook = async () => {
         if (!deletingBookId || !user?.sheetId) return;
-        // FIX: Pass sheetId to deleteBook. Expected 2 arguments.
         await libraryApi.deleteBook(user.sheetId, deletingBookId);
         showToast(t('toastBookDeleted'));
         setDeletingBookId(null);
