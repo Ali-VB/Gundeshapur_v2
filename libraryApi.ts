@@ -1,14 +1,7 @@
 // This file implements the Library Data API using the Google Sheets API.
 
 import { Book, Member, Loan } from './types';
-
-// Helper to access the gapi client
-const getSheetsApi = () => {
-    if (!window.gapi || !window.gapi.client || !window.gapi.client.sheets) {
-        throw new Error('Google Sheets API client not initialized.');
-    }
-    return window.gapi.client.sheets;
-}
+import { getSheetsApi } from './googleApi';
 
 // Helper to generate a unique ID for new entries
 const generateId = () => `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

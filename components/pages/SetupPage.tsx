@@ -1,15 +1,30 @@
 import React, { useState } from 'react';
-import { useAuth, useTranslation } from '../../index';
+import { useAuth, useTranslation, useToast } from '../../index';
 import { Input } from '../common/Input';
+import { createSpreadsheet } from '../../googleApi';
 
 export const SetupPage = () => {
     const { updateSheetId } = useAuth();
     const { t } = useTranslation();
+    const { showToast } = useToast();
     const [sheetIdInput, setSheetIdInput] = useState('');
+    const [isCreating, setIsCreating] = useState(false);
 
     const handleCreateSheet = async () => {
-        const newSheetId = "mock_new_" + Date.now();
-        await updateSheetId(newSheetId);
+        setIsCreating(true);
+        try {
+            const newSheetId = await createSpreadsheet('Gundeshapur Library');
+            if (newSheetId) {
+                await updateSheetId(newSheetId);
+            } else {
+                 showToast('Failed to create new sheet.', 'error');
+            }
+        } catch (error) {
+            console.error("Failed to create sheet:", error);
+            showToast('An error occurred while creating the sheet.', 'error');
+        } finally {
+            setIsCreating(false);
+        }
     };
 
     const handleConnectSheet = async (e: React.FormEvent) => {
@@ -27,8 +42,12 @@ export const SetupPage = () => {
                 <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-8 flex flex-col">
                     <h2 className="text-2xl font-bold text-cyan-300 mb-4">{t('setupOpt1Title')}</h2>
                     <p className="text-slate-400 flex-grow mb-8 text-base">{t('setupOpt1Desc')}</p>
-                    <button onClick={handleCreateSheet} className="w-full px-5 py-3 font-semibold text-white bg-cyan-600 rounded-lg hover:bg-cyan-700 transition">
-                        {t('setupOpt1Button')}
+                    <button 
+                        onClick={handleCreateSheet} 
+                        disabled={isCreating}
+                        className="w-full px-5 py-3 font-semibold text-white bg-cyan-600 rounded-lg hover:bg-cyan-700 transition disabled:bg-cyan-800 disabled:cursor-not-allowed"
+                    >
+                        {isCreating ? t('loading') + '...' : t('setupOpt1Button')}
                     </button>
                 </div>
                 <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-8 flex flex-col">
