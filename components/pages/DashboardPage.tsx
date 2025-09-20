@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth, useTranslation } from '../../index';
 import { Book, Member, Loan } from '../../types';
-import { db } from '../../constants';
+import * as libraryApi from '../../libraryApi';
 
 // Import Views
 import { BooksView } from '../dashboard/BooksView';
@@ -101,21 +101,28 @@ export const DashboardPage = () => {
     const [loadingData, setLoadingData] = useState(true);
 
     const fetchData = async () => {
+        if (!user || !user.sheetId) return;
         if (!loadingData) setLoadingData(true);
-        const [booksData, membersData, loansData] = await Promise.all([
-            db.getBooks() as Promise<Book[]>,
-            db.getMembers() as Promise<Member[]>,
-            db.getLoans() as Promise<Loan[]>,
-        ]);
-        setBooks(booksData);
-        setMembers(membersData);
-        setLoans(loansData);
-        setLoadingData(false);
+        try {
+            const [booksData, membersData, loansData] = await Promise.all([
+                libraryApi.getBooks(user.sheetId),
+                libraryApi.getMembers(user.sheetId),
+                libraryApi.getLoans(user.sheetId),
+            ]);
+            setBooks(booksData);
+            setMembers(membersData);
+            setLoans(loansData);
+        } catch (error) {
+            console.error("Failed to fetch library data:", error);
+            // Optionally: show a toast notification to the user
+        } finally {
+            setLoadingData(false);
+        }
     };
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [user]);
 
     const UpgradeBanner = () => (
         <div className="bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg p-5 mb-8 flex items-center justify-between text-white flex-col sm:flex-row gap-4 text-center sm:text-left">
@@ -155,7 +162,6 @@ export const DashboardPage = () => {
                     {user?.plan === 'free' && <UpgradeBanner />}
                      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                         <h1 className="text-4xl font-bold text-slate-100 capitalize">{activeView}</h1>
-                        {/* FIX: Corrected type comparison errors by adding a check for `user` and simplifying the logic inside the conditional rendering block. The original code had redundant checks that caused type errors. */}
                          {(activeView === 'dashboard' && user && user.plan !== 'free') && (
                             <div className="flex gap-3">
                                 <button className="px-4 py-2 text-sm font-semibold bg-slate-700 rounded-lg hover:bg-slate-600 transition">

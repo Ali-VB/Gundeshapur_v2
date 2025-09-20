@@ -1,8 +1,12 @@
+
 import React, { useState, useEffect, useContext, createContext } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { User, AuthContextType, LanguageContextType, ToastContextType, Translations, Locale, ToastMessage } from './types';
-import { auth, db, googleProvider, SUPER_ADMIN_EMAIL } from './constants';
+import { auth, db, googleProvider, signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc } from './firebase';
+import { gapiManager } from './googleApi';
+import { SUPER_ADMIN_EMAIL } from './constants';
+import { GoogleAuthProvider } from 'firebase/auth';
 
 // --- LANGUAGE/TRANSLATION CONTEXT ---
 const translations: Translations = {
@@ -348,7 +352,7 @@ export const useToast = () => {
 };
 
 
-// --- AUTH CONTEXT (Unchanged from previous step) ---
+// --- AUTH CONTEXT (IMPLEMENTED WITH REAL FIREBASE & GAPI) ---
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -356,26 +360,25 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const userRef = db.doc(db, 'users', firebaseUser.uid);
-        const userDoc = await db.getDoc(userRef) as any;
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        const userDoc = await getDoc(userRef);
 
         if (userDoc.exists()) {
           setUser(userDoc.data() as User);
         } else {
-          // New user, create a document for them
           const isSuperAdmin = firebaseUser.email === SUPER_ADMIN_EMAIL;
           const newUser: User = {
             uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
+            email: firebaseUser.email || 'No email',
+            displayName: firebaseUser.displayName || 'No name',
             role: isSuperAdmin ? 'admin' : 'user',
             sheetId: null,
             plan: 'free',
             subscriptionStatus: 'active',
           };
-          await db.setDoc(userRef, newUser);
+          await setDoc(userRef, newUser);
           setUser(newUser);
         }
       } else {
@@ -387,19 +390,25 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     return () => unsubscribe();
   }, []);
   
-  const signIn = async () => {
+  const handleSignIn = async () => {
     try {
         setLoading(true);
-        await auth.signInWithPopup(auth, googleProvider);
+        const result = await signInWithPopup(auth, googleProvider);
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        const token = credential?.accessToken;
+        if(token) {
+           await gapiManager.initClient(token);
+        }
+        // onAuthStateChanged will handle setting the user state
     } catch (error) {
         console.error("Authentication error:", error);
         setLoading(false);
     }
   };
 
-  const signOut = async () => {
+  const handleSignOut = async () => {
     setLoading(true);
-    await auth.signOut(auth);
+    await signOut(auth);
     setUser(null);
     setLoading(false);
   };
@@ -407,18 +416,17 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const updateSheetId = async (sheetId: string) => {
       if (!user) return;
       setLoading(true);
-      const userRef = db.doc(db, 'users', user.uid);
-      await db.setDoc(userRef, { sheetId }, { merge: true });
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, { sheetId }, { merge: true });
       setUser(prevUser => prevUser ? { ...prevUser, sheetId } : null);
-      localStorage.setItem('sheetId', sheetId);
       setLoading(false);
   };
     
   const updateSubscription = async (plan: 'free' | 'pro' | 'enterprise') => {
       if (!user) return;
       setLoading(true);
-      const userRef = db.doc(db, 'users', user.uid);
-      await db.setDoc(userRef, { plan, subscriptionStatus: 'active' }, { merge: true });
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, { plan, subscriptionStatus: 'active' }, { merge: true });
       setUser(prevUser => prevUser ? { ...prevUser, plan, subscriptionStatus: 'active' } : null);
       setLoading(false);
   };
@@ -426,8 +434,8 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const value: AuthContextType = {
     user,
     loading,
-    signIn,
-    signOut,
+    signIn: handleSignIn,
+    signOut: handleSignOut,
     updateSheetId,
     updateSubscription,
   };

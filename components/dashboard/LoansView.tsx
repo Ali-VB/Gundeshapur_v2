@@ -1,7 +1,10 @@
+
+
 import React, { useState, useMemo } from 'react';
-import { useTranslation, useToast } from '../../index';
+// FIX: Import useAuth to access the user's sheetId for API calls.
+import { useTranslation, useToast, useAuth } from '../../index';
 import { Loan, Book, Member } from '../../types';
-import { db } from '../../constants';
+import * as libraryApi from '../../libraryApi';
 import { Input } from '../common/Input';
 import { Modal } from '../common/Modal';
 import { LoanForm } from './LoanForm';
@@ -11,6 +14,8 @@ import { SortIcon } from '../common/Icons';
 export const LoansView: React.FC<{ loans: Loan[]; books: Book[]; members: Member[]; onUpdate: () => void }> = ({ loans, books, members, onUpdate }) => {
     const { t, locale } = useTranslation();
     const { showToast } = useToast();
+    // FIX: Get user from auth context to use sheetId.
+    const { user } = useAuth();
     const [search, setSearch] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     
@@ -31,14 +36,18 @@ export const LoansView: React.FC<{ loans: Loan[]; books: Book[]; members: Member
     }), [sortedLoans, search]);
 
     const handleSaveLoan = async (loanData: { bookId: string; memberId: string; }) => {
-        await db.addLoan(loanData);
+        if (!user?.sheetId) return;
+        // FIX: Pass sheetId to addLoan. Expected 2 arguments.
+        await libraryApi.addLoan(user.sheetId, loanData);
         showToast(t('toastLoanAdded'));
         setIsModalOpen(false);
         onUpdate();
     };
 
     const handleReturnLoan = async (loanId: string) => {
-        await db.returnLoan(loanId);
+        if (!user?.sheetId) return;
+        // FIX: Pass sheetId to returnLoan. Expected 2 arguments.
+        await libraryApi.returnLoan(user.sheetId, loanId);
         showToast(t('toastLoanReturned'));
         onUpdate();
     };

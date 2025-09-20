@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../index';
 import { User } from '../../types';
-import { db } from '../../constants';
+import { getAllUsers } from '../../firebase';
 
 export const AdminPage = () => {
     const [users, setUsers] = useState<User[]>([]);
@@ -11,7 +12,7 @@ export const AdminPage = () => {
     useEffect(() => {
         const fetchUsers = async () => {
             setLoading(true);
-            const userList = await db.getAllUsers() as User[];
+            const userList = await getAllUsers();
             setUsers(userList);
             setLoading(false);
         };

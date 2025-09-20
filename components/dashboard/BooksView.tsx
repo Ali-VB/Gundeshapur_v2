@@ -1,7 +1,10 @@
+
+
 import React, { useState, useMemo } from 'react';
-import { useTranslation, useToast } from '../../index';
+// FIX: Import useAuth to access the user's sheetId for API calls.
+import { useTranslation, useToast, useAuth } from '../../index';
 import { Book } from '../../types';
-import { db } from '../../constants';
+import * as libraryApi from '../../libraryApi';
 import { Input } from '../common/Input';
 import { Modal } from '../common/Modal';
 import { BookForm } from './BookForm';
@@ -11,6 +14,8 @@ import { SortIcon } from '../common/Icons';
 export const BooksView: React.FC<{ books: Book[]; onUpdate: () => void }> = ({ books, onUpdate }) => {
     const { t } = useTranslation();
     const { showToast } = useToast();
+    // FIX: Get user from auth context to use sheetId.
+    const { user } = useAuth();
     const [search, setSearch] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingBook, setEditingBook] = useState<Book | undefined>(undefined);
@@ -25,12 +30,15 @@ export const BooksView: React.FC<{ books: Book[]; onUpdate: () => void }> = ({ b
     ), [sortedBooks, search]);
 
     const handleSaveBook = async (bookData: any) => {
+        if (!user?.sheetId) return;
         if (editingBook) {
-            await db.updateBook(editingBook.id, bookData);
+            // FIX: Pass sheetId to updateBook. Expected 3 arguments.
+            await libraryApi.updateBook(user.sheetId, editingBook.id, bookData);
             showToast(t('toastBookUpdated'));
         } else {
             const newBook = { ...bookData, availableCopies: bookData.totalCopies };
-            await db.addBook(newBook);
+            // FIX: Pass sheetId to addBook. Expected 2 arguments.
+            await libraryApi.addBook(user.sheetId, newBook);
             showToast(t('toastBookAdded'));
         }
         closeModal();
@@ -38,8 +46,9 @@ export const BooksView: React.FC<{ books: Book[]; onUpdate: () => void }> = ({ b
     };
 
     const handleDeleteBook = async () => {
-        if (!deletingBookId) return;
-        await db.deleteBook(deletingBookId);
+        if (!deletingBookId || !user?.sheetId) return;
+        // FIX: Pass sheetId to deleteBook. Expected 2 arguments.
+        await libraryApi.deleteBook(user.sheetId, deletingBookId);
         showToast(t('toastBookDeleted'));
         setDeletingBookId(null);
         onUpdate();

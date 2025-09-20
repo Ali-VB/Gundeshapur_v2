@@ -1,7 +1,10 @@
+
+
 import React, { useState, useMemo } from 'react';
-import { useTranslation, useToast } from '../../index';
+// FIX: Import useAuth to access the user's sheetId for API calls.
+import { useTranslation, useToast, useAuth } from '../../index';
 import { Member } from '../../types';
-import { db } from '../../constants';
+import * as libraryApi from '../../libraryApi';
 import { Input } from '../common/Input';
 import { Modal } from '../common/Modal';
 import { MemberForm } from './MemberForm';
@@ -11,6 +14,8 @@ import { SortIcon } from '../common/Icons';
 export const MembersView: React.FC<{ members: Member[]; onUpdate: () => void }> = ({ members, onUpdate }) => {
     const { t } = useTranslation();
     const { showToast } = useToast();
+    // FIX: Get user from auth context to use sheetId.
+    const { user } = useAuth();
     const [search, setSearch] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingMember, setEditingMember] = useState<Member | undefined>(undefined);
@@ -24,11 +29,14 @@ export const MembersView: React.FC<{ members: Member[]; onUpdate: () => void }> 
     ), [sortedMembers, search]);
 
     const handleSaveMember = async (memberData: any) => {
+        if (!user?.sheetId) return;
         if (editingMember) {
-            await db.updateMember(editingMember.id, memberData);
+            // FIX: Pass sheetId to updateMember. Expected 3 arguments.
+            await libraryApi.updateMember(user.sheetId, editingMember.id, memberData);
             showToast(t('toastMemberUpdated'));
         } else {
-            await db.addMember(memberData);
+            // FIX: Pass sheetId to addMember. Expected 2 arguments.
+            await libraryApi.addMember(user.sheetId, memberData);
             showToast(t('toastMemberAdded'));
         }
         closeModal();
@@ -36,8 +44,9 @@ export const MembersView: React.FC<{ members: Member[]; onUpdate: () => void }> 
     };
 
     const handleDeleteMember = async () => {
-        if (!deletingMemberId) return;
-        await db.deleteMember(deletingMemberId);
+        if (!deletingMemberId || !user?.sheetId) return;
+        // FIX: Pass sheetId to deleteMember. Expected 2 arguments.
+        await libraryApi.deleteMember(user.sheetId, deletingMemberId);
         showToast(t('toastMemberDeleted'));
         setDeletingMemberId(null);
         onUpdate();
