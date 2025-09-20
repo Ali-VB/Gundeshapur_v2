@@ -5,6 +5,7 @@ import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { Layout } from './components/layout/Layout';
 import { LandingPage } from './components/pages/LandingPage';
 import { AdminPage } from './components/pages/AdminPage';
+import { SetupPage } from './components/pages/SetupPage';
 import { DashboardPage } from './components/pages/DashboardPage';
 
 function App() {
@@ -18,8 +19,9 @@ function App() {
     if (user?.role === 'admin') {
       return <AdminPage />;
     }
-    // All non-admin users, new or returning, are directed to the Dashboard.
-    // The Dashboard component itself will handle showing a setup prompt if needed.
+    if (!user?.sheetId) {
+      return <SetupPage />;
+    }
     return <DashboardPage />;
   };
 
