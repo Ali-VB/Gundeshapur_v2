@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect, useContext, createContext } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { User, AuthContextType, LanguageContextType, ToastContextType, Translations, Locale, ToastMessage } from './types';
-import { auth, db, googleProvider, onAuthStateChanged, signOut, doc, getDoc, setDoc, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from './firebase';
+import { auth, db, googleProvider, signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc } from './firebase';
 import { gapiManager } from './googleApi';
 import { SUPER_ADMIN_EMAIL } from './constants';
-
+import { GoogleAuthProvider } from 'firebase/auth';
 
 // --- LANGUAGE/TRANSLATION CONTEXT ---
 const translations: Translations = {
@@ -26,17 +25,11 @@ const translations: Translations = {
     loginSubtitle: 'Simple, affordable library management for your community.',
     loginButton: 'Sign In with Google',
     // Admin Page
-    adminTitle: 'Admin Panel',
+    adminTitle: 'Admin Panel - User Management',
     adminDisplayName: 'Display Name',
     adminEmail: 'Email',
     adminPlan: 'Plan',
     adminStatus: 'Status',
-    adminSheetId: 'Sheet ID',
-    adminNavDashboard: 'Dashboard',
-    adminNavUsers: 'Users',
-    adminNavSubscriptions: 'Subscriptions',
-    adminNavLogs: 'Logs & Usage',
-    adminNavBugs: 'Bug Reports',
     manageUser: 'Manage User',
     changePlan: 'Change Plan',
     changeRole: 'Change Role',
@@ -119,9 +112,6 @@ const translations: Translations = {
     toastMemberDeleted: 'Member deleted.',
     toastLoanAdded: 'Book lent successfully!',
     toastLoanReturned: 'Loan returned successfully!',
-    toastAuthCancelled: 'Sign-in was cancelled.',
-    toastAuthPopupBlocked: 'Sign-in popup was blocked by the browser. Please allow popups.',
-    toastAuthGenericError: 'An error occurred during sign-in. Please try again.',
     // AI Librarian
     aiWelcomeMessage: "Hello! I'm your AI Librarian Assistant. How can I help you today? You can ask me for book suggestions, summaries, and more.",
     aiPlaceholder: 'Ask for book suggestions, summaries, etc...',
@@ -139,17 +129,11 @@ const translations: Translations = {
     loginTitle: 'Gestor de Biblioteca Gundeshapur',
     loginSubtitle: 'Gestión de bibliotecas simple y asequible para tu comunidad.',
     loginButton: 'Iniciar Sesión con Google',
-    adminTitle: 'Panel de Admin',
+    adminTitle: 'Panel de Admin - Gestión de Usuarios',
     adminDisplayName: 'Nombre',
     adminEmail: 'Correo Electrónico',
     adminPlan: 'Plan',
     adminStatus: 'Estado',
-    adminSheetId: 'ID de Hoja',
-    adminNavDashboard: 'Dashboard',
-    adminNavUsers: 'Usuarios',
-    adminNavSubscriptions: 'Suscripciones',
-    adminNavLogs: 'Logs y Uso',
-    adminNavBugs: 'Informes de Errores',
     manageUser: 'Gestionar Usuario',
     changePlan: 'Cambiar Plan',
     changeRole: 'Cambiar Rol',
@@ -225,9 +209,6 @@ const translations: Translations = {
     toastMemberDeleted: 'Miembro eliminado.',
     toastLoanAdded: '¡Libro prestado con éxito!',
     toastLoanReturned: '¡Préstamo devuelto con éxito!',
-    toastAuthCancelled: 'El inicio de sesión fue cancelado.',
-    toastAuthPopupBlocked: 'La ventana de inicio de sesión fue bloqueada por el navegador. Por favor, permita las ventanas emergentes.',
-    toastAuthGenericError: 'Ocurrió un error durante el inicio de sesión. Por favor, inténtalo de nuevo.',
     aiWelcomeMessage: '¡Hola! Soy tu Asistente de Bibliotecario IA. ¿Cómo puedo ayudarte hoy? Puedes pedirme sugerencias de libros, resúmenes y más.',
     aiPlaceholder: 'Pide sugerencias de libros, resúmenes, etc...',
   },
@@ -244,17 +225,11 @@ const translations: Translations = {
     loginTitle: 'Gestionnaire de Bibliothèque Gundeshapur',
     loginSubtitle: 'Gestion de bibliothèque simple et abordable pour votre communauté.',
     loginButton: 'Se Connecter avec Google',
-    adminTitle: "Panneau d'Administration",
+    adminTitle: "Panneau d'Administration - Gestion des Utilisateurs",
     adminDisplayName: "Nom d'Affichage",
     adminEmail: 'Email',
     adminPlan: 'Forfait',
     adminStatus: 'Statut',
-    adminSheetId: 'ID de Feuille',
-    adminNavDashboard: 'Tableau de bord',
-    adminNavUsers: 'Utilisateurs',
-    adminNavSubscriptions: 'Abonnements',
-    adminNavLogs: 'Logs & Utilisation',
-    adminNavBugs: 'Rapports de Bugs',
     manageUser: "Gérer l'utilisateur",
     changePlan: 'Changer de forfait',
     changeRole: 'Changer de rôle',
@@ -330,9 +305,6 @@ const translations: Translations = {
     toastMemberDeleted: 'Membre supprimé.',
     toastLoanAdded: 'Livre prêté avec succès!',
     toastLoanReturned: 'Emprunt retourné avec succès!',
-    toastAuthCancelled: 'La connexion a été annulée.',
-    toastAuthPopupBlocked: 'La fenêtre de connexion a été bloquée par le navigateur. Veuillez autoriser les fenêtres contextuelles.',
-    toastAuthGenericError: "Une erreur s'est produite lors de la connexion. Veuillez réessayer.",
     aiWelcomeMessage: "Bonjour! Je suis votre Assistant Bibliothécaire IA. Comment puis-je vous aider aujourd'hui? Vous pouvez me demander des suggestions de livres, des résumés, et plus encore.",
     aiPlaceholder: 'Demandez des suggestions de livres, des résumés, etc...',
   },
@@ -347,7 +319,10 @@ const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children })
         setLocale(lang);
         localStorage.setItem('locale', lang);
     };
-    
+
+    // Fix: Corrected the type of the `t` function to align with `LanguageContextType`.
+    // The key parameter is now `string`, and type assertions are used to handle translation lookups,
+    // ensuring the return type is always a string.
     const t = (key: string): string => {
         return (translations[locale] as Record<string, string>)[key] || (translations.en as Record<string, string>)[key] || key;
     };
@@ -401,121 +376,70 @@ export const useToast = () => {
 };
 
 
-// --- AUTH CONTEXT (RE-ARCHITECTED FOR STABILITY) ---
+// --- AUTH CONTEXT (IMPLEMENTED WITH REAL FIREBASE & GAPI) ---
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const { showToast } = useToast();
-  const { t } = useTranslation();
-  
-  const GAPI_TOKEN_KEY = 'gapiToken';
 
   useEffect(() => {
-    const initializeApp = async () => {
-      let gapiToken = sessionStorage.getItem(GAPI_TOKEN_KEY);
-      let gapiInitialized = false;
-      let firebaseUser = auth.currentUser;
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        const userDoc = await getDoc(userRef);
+        const lastLoginTime = new Date().toISOString();
 
-      try {
-        // Step 1: Handle the redirect result from Google Sign-In.
-        // This runs only when the user is redirected back from Google.
-        if(!firebaseUser) { // only check for redirect if we don't have a user yet
-            const result = await getRedirectResult(auth);
-            if (result) {
-              firebaseUser = result.user;
-              const credential = GoogleAuthProvider.credentialFromResult(result);
-              const freshToken = credential?.accessToken;
-              if (freshToken) {
-                gapiToken = freshToken;
-                sessionStorage.setItem(GAPI_TOKEN_KEY, gapiToken);
-              }
-            }
-        }
-        
-        // Step 2: Initialize Google API Client if we have a token.
-        // This runs on initial load, redirect, or refresh.
-        if (gapiToken) {
-          try {
-            await gapiManager.initClient(gapiToken);
-            gapiInitialized = true;
-          } catch (gapiError) {
-            console.error("GAPI initialization failed, token might be expired.", gapiError);
-            sessionStorage.removeItem(GAPI_TOKEN_KEY);
-            // Force sign out to get a fresh token next time.
-            await signOut(auth);
-            firebaseUser = null;
-          }
-        }
-
-        // Step 3: Now that GAPI is handled, determine the final user state.
-        if (firebaseUser && gapiInitialized) {
-          // This is the only successful login path.
-          const userRef = doc(db, 'users', firebaseUser.uid);
-          const userDoc = await getDoc(userRef);
-          const lastLoginTime = new Date().toISOString();
-
-          if (userDoc.exists()) {
-            await setDoc(userRef, { lastLogin: lastLoginTime }, { merge: true });
-            setUser({ ...(userDoc.data() as User), lastLogin: lastLoginTime });
-          } else {
-            const isSuperAdmin = firebaseUser.email === SUPER_ADMIN_EMAIL;
-            const newUser: User = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email || 'No email',
-              displayName: firebaseUser.displayName || 'No name',
-              role: isSuperAdmin ? 'admin' : 'user',
-              sheetId: null,
-              plan: 'free',
-              subscriptionStatus: 'active',
-              lastLogin: lastLoginTime,
-            };
-            await setDoc(userRef, newUser);
-            setUser(newUser);
-          }
+        if (userDoc.exists()) {
+          // Existing user: update their last login time.
+          // The user object in the app's state doesn't need this immediately,
+          // as the Admin Panel will fetch the latest data directly.
+          await setDoc(userRef, { lastLogin: lastLoginTime }, { merge: true });
+          setUser(userDoc.data() as User);
         } else {
-          // If any condition fails (no user, or GAPI failed), ensure we are in a clean signed-out state.
-          setUser(null);
-          sessionStorage.removeItem(GAPI_TOKEN_KEY);
+          // New user: create the full user document with the last login time.
+          const isSuperAdmin = firebaseUser.email === SUPER_ADMIN_EMAIL;
+          const newUser: User = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || 'No email',
+            displayName: firebaseUser.displayName || 'No name',
+            role: isSuperAdmin ? 'admin' : 'user',
+            sheetId: null,
+            plan: 'free',
+            subscriptionStatus: 'active',
+            lastLogin: lastLoginTime,
+          };
+          await setDoc(userRef, newUser);
+          setUser(newUser);
         }
-        
-      } catch (error: any) {
-        console.error("Critical authentication error:", error);
-        if(error.code !== 'auth/redirect-cancelled-by-user') {
-            showToast(t('toastAuthGenericError'), 'error');
-        }
-        await signOut(auth);
+      } else {
         setUser(null);
-        sessionStorage.removeItem(GAPI_TOKEN_KEY);
-      } finally {
-        setLoading(false);
       }
-    };
-
-    initializeApp();
-    
-    // Also, listen for external auth changes (e.g. user logs out from another tab)
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-        if (!firebaseUser && user) {
-            // User was logged in, but now isn't. Clean up state.
-            setUser(null);
-            sessionStorage.removeItem(GAPI_TOKEN_KEY);
-        }
+      setLoading(false);
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
   
   const handleSignIn = async () => {
-    setLoading(true);
-    await signInWithRedirect(auth, googleProvider);
+    try {
+        setLoading(true);
+        const result = await signInWithPopup(auth, googleProvider);
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        const token = credential?.accessToken;
+        if(token) {
+           await gapiManager.initClient(token);
+        }
+        // onAuthStateChanged will handle setting the user state
+    } catch (error) {
+        console.error("Authentication error:", error);
+        setLoading(false);
+    }
   };
 
   const handleSignOut = async () => {
     setLoading(true);
     await signOut(auth);
-    sessionStorage.removeItem(GAPI_TOKEN_KEY);
     setUser(null);
     setLoading(false);
   };
@@ -567,12 +491,12 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <LanguageProvider>
-      <ToastProvider>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </ToastProvider>
-    </LanguageProvider>
+    <AuthProvider>
+      <LanguageProvider>
+          <ToastProvider>
+             <App />
+          </ToastProvider>
+      </LanguageProvider>
+    </AuthProvider>
   </React.StrictMode>
 );

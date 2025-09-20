@@ -1,6 +1,6 @@
 
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { User } from './types';
 import { firebaseConfig } from './config';
@@ -36,11 +36,9 @@ export {
   auth,
   db,
   googleProvider,
+  signInWithPopup,
   onAuthStateChanged,
   signOut,
-  signInWithRedirect,
-  getRedirectResult,
-  GoogleAuthProvider,
   doc,
   getDoc,
   setDoc,
