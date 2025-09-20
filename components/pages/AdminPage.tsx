@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth, useTranslation, useToast } from '../../index';
-import { User } from '../../types';
+import { User, Subscription, LogEntry } from '../../types';
 import { getAllUsers, updateUser } from '../../firebase';
 import { Logo } from '../common/Logo';
 import { ManageUserModal } from '../admin/ManageUserModal';
+import { getSubscriptions } from '../../stripeApi';
+import { log } from '../../loggingService';
+import { AdminSubscriptionsView } from '../admin/AdminSubscriptionsView';
+import { AdminLogsView } from '../admin/AdminLogsView';
+import { AdminBugsView } from '../admin/AdminBugsView';
 
 // --- SUB-COMPONENTS FOR DIFFERENT VIEWS ---
 
@@ -84,19 +89,12 @@ const AdminUsersView: React.FC<{ users: User[], onManageUser: (user: User) => vo
     );
 };
 
-const PlaceholderView: React.FC<{ title: string }> = ({ title }) => (
-    <div>
-        <h2 className="text-3xl font-bold text-slate-100 mb-6">{title}</h2>
-        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-12 text-center">
-            <p className="text-slate-400">This feature is coming soon.</p>
-        </div>
-    </div>
-);
-
 // --- MAIN ADMIN PAGE COMPONENT ---
 
 export const AdminPage = () => {
     const [users, setUsers] = useState<User[]>([]);
+    const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+    const [logs, setLogs] = useState<LogEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [managingUser, setManagingUser] = useState<User | null>(null);
     const [activeView, setActiveView] = useState('dashboard');
@@ -104,20 +102,28 @@ export const AdminPage = () => {
     const { t } = useTranslation();
     const { showToast } = useToast();
 
+    const fetchData = async () => {
+        setLoading(true);
+        const userList = await getAllUsers();
+        setUsers(userList);
+        const subs = await getSubscriptions(userList);
+        setSubscriptions(subs);
+        setLogs(log.getLogs()); // Get current logs
+        setLoading(false);
+    };
+
     useEffect(() => {
-        const fetchUsers = async () => {
-            setLoading(true);
-            const userList = await getAllUsers();
-            setUsers(userList);
-            setLoading(false);
-        };
-        fetchUsers();
+        fetchData();
+        // Subscribe to log updates
+        const unsubscribe = log.subscribe(setLogs);
+        return () => unsubscribe();
     }, []);
 
     const handleUpdateUser = async (uid: string, updates: Partial<User>) => {
         try {
             await updateUser(uid, updates);
-            setUsers(prevUsers => prevUsers.map(u => u.uid === uid ? { ...u, ...updates } : u));
+            // Refetch all data to ensure consistency across views
+            await fetchData(); 
             showToast(t('toastUserUpdatedAdmin'));
             setManagingUser(null);
         } catch (error) {
@@ -135,11 +141,11 @@ export const AdminPage = () => {
             case 'users':
                 return <AdminUsersView users={users} onManageUser={setManagingUser} />;
             case 'subscriptions':
-                return <PlaceholderView title={t('adminNavSubscriptions')} />;
+                return <AdminSubscriptionsView subscriptions={subscriptions} />;
             case 'logs':
-                return <PlaceholderView title={t('adminNavLogs')} />;
+                return <AdminLogsView logs={logs} onRefresh={() => setLogs(log.getLogs())} />;
             case 'bugs':
-                return <PlaceholderView title={t('adminNavBugs')} />;
+                return <AdminBugsView logs={logs} />;
             default:
                 return <AdminDashboardView users={users} />;
         }

@@ -6,6 +6,7 @@ import { auth, db, googleProvider, signInWithPopup, onAuthStateChanged, signOut,
 import { gapiManager } from './googleApi';
 import { SUPER_ADMIN_EMAIL } from './constants';
 import { GoogleAuthProvider } from 'firebase/auth';
+import { log } from './loggingService';
 
 // --- LANGUAGE/TRANSLATION CONTEXT ---
 const translations: Translations = {
@@ -20,6 +21,7 @@ const translations: Translations = {
     edit: 'Edit',
     add: 'Add',
     areYouSure: 'Are you sure?',
+    submit: 'Submit',
     // Login Page
     loginTitle: 'Gundeshapur Library Manager',
     loginSubtitle: 'Simple, affordable library management for your community.',
@@ -40,6 +42,21 @@ const translations: Translations = {
     changePlan: 'Change Plan',
     changeRole: 'Change Role',
     toastUserUpdatedAdmin: 'User updated successfully!',
+    // Admin Subscriptions
+    subsUser: 'User',
+    subsPlan: 'Plan',
+    subsStatus: 'Status',
+    subsPeriod: 'Current Period',
+    // Admin Logs
+    logsTitle: 'Real-time Logs & Usage',
+    logsRefresh: 'Refresh',
+    logsTimestamp: 'Timestamp',
+    logsType: 'Type',
+    logsMessage: 'Message',
+    // Admin Bugs
+    bugsTitle: 'User Bug Reports',
+    bugsReportedBy: 'Reported by',
+    bugsAt: 'at',
     // Setup Page
     setupTitle: "Welcome! Let's set up your library.",
     setupSubtitle: "Connect your library's data source to get started.",
@@ -56,6 +73,9 @@ const translations: Translations = {
     backupButtonPro: 'Backup Data (Pro)',
     exportButton: 'Export Data',
     exportButtonEnt: 'Export Data (Ent)',
+    bugReportButton: 'Report a Bug',
+    bugReportTitle: 'Report a Bug or Feedback',
+    bugReportDesc: 'Describe the issue you are facing or any feedback you have.',
     upgradeBannerTitle: "You're on the Free plan!",
     upgradeBannerSubtitle: 'Unlock powerful features like unlimited books and data backups by upgrading.',
     upgradeBannerButton: 'Upgrade Now',
@@ -118,6 +138,7 @@ const translations: Translations = {
     toastMemberDeleted: 'Member deleted.',
     toastLoanAdded: 'Book lent successfully!',
     toastLoanReturned: 'Loan returned successfully!',
+    toastBugReported: 'Thank you! Your report has been submitted.',
     // AI Librarian
     aiWelcomeMessage: "Hello! I'm your AI Librarian Assistant. How can I help you today? You can ask me for book suggestions, summaries, and more.",
     aiPlaceholder: 'Ask for book suggestions, summaries, etc...',
@@ -132,6 +153,7 @@ const translations: Translations = {
     edit: 'Editar',
     add: 'Añadir',
     areYouSure: '¿Estás seguro?',
+    submit: 'Enviar',
     loginTitle: 'Gestor de Biblioteca Gundeshapur',
     loginSubtitle: 'Gestión de bibliotecas simple y asequible para tu comunidad.',
     loginButton: 'Iniciar Sesión con Google',
@@ -150,6 +172,18 @@ const translations: Translations = {
     changePlan: 'Cambiar Plan',
     changeRole: 'Cambiar Rol',
     toastUserUpdatedAdmin: '¡Usuario actualizado con éxito!',
+    subsUser: 'Usuario',
+    subsPlan: 'Plan',
+    subsStatus: 'Estado',
+    subsPeriod: 'Período Actual',
+    logsTitle: 'Logs y Uso en Tiempo Real',
+    logsRefresh: 'Actualizar',
+    logsTimestamp: 'Timestamp',
+    logsType: 'Tipo',
+    logsMessage: 'Mensaje',
+    bugsTitle: 'Informes de Errores de Usuarios',
+    bugsReportedBy: 'Reportado por',
+    bugsAt: 'a las',
     setupTitle: '¡Bienvenido! Configuremos tu biblioteca.',
     setupSubtitle: 'Conecta la fuente de datos de tu biblioteca para comenzar.',
     setupOpt1Title: 'Opción 1: Crear una Nueva Hoja',
@@ -164,6 +198,9 @@ const translations: Translations = {
     backupButtonPro: 'Copia de Seguridad (Pro)',
     exportButton: 'Exportar Datos',
     exportButtonEnt: 'Exportar Datos (Ent)',
+    bugReportButton: 'Reportar un Error',
+    bugReportTitle: 'Reportar un Error o Comentario',
+    bugReportDesc: 'Describe el problema que enfrentas o cualquier comentario que tengas.',
     upgradeBannerTitle: '¡Estás en el plan Gratuito!',
     upgradeBannerSubtitle: 'Desbloquea funciones potentes como libros ilimitados y copias de seguridad de datos actualizando tu plan.',
     upgradeBannerButton: 'Actualizar Ahora',
@@ -221,6 +258,7 @@ const translations: Translations = {
     toastMemberDeleted: 'Miembro eliminado.',
     toastLoanAdded: '¡Libro prestado con éxito!',
     toastLoanReturned: '¡Préstamo devuelto con éxito!',
+    toastBugReported: '¡Gracias! Tu informe ha sido enviado.',
     aiWelcomeMessage: '¡Hola! Soy tu Asistente de Bibliotecario IA. ¿Cómo puedo ayudarte hoy? Puedes pedirme sugerencias de libros, resúmenes y más.',
     aiPlaceholder: 'Pide sugerencias de libros, resúmenes, etc...',
   },
@@ -234,6 +272,7 @@ const translations: Translations = {
     edit: 'Modifier',
     add: 'Ajouter',
     areYouSure: 'Êtes-vous sûr?',
+    submit: 'Soumettre',
     loginTitle: 'Gestionnaire de Bibliothèque Gundeshapur',
     loginSubtitle: 'Gestion de bibliothèque simple et abordable pour votre communauté.',
     loginButton: 'Se Connecter avec Google',
@@ -252,6 +291,18 @@ const translations: Translations = {
     changePlan: 'Changer de forfait',
     changeRole: 'Changer de rôle',
     toastUserUpdatedAdmin: 'Utilisateur mis à jour avec succès !',
+    subsUser: 'Utilisateur',
+    subsPlan: 'Forfait',
+    subsStatus: 'Statut',
+    subsPeriod: 'Période Actuelle',
+    logsTitle: 'Logs & Utilisation en Temps Réel',
+    logsRefresh: 'Rafraîchir',
+    logsTimestamp: 'Timestamp',
+    logsType: 'Type',
+    logsMessage: 'Message',
+    bugsTitle: 'Rapports de Bugs des Utilisateurs',
+    bugsReportedBy: 'Signalé par',
+    bugsAt: 'à',
     setupTitle: 'Bienvenue! Configurons votre bibliothèque.',
     setupSubtitle: 'Connectez la source de données de votre bibliothèque pour commencer.',
     setupOpt1Title: 'Option 1: Créer une Nouvelle Feuille',
@@ -266,6 +317,9 @@ const translations: Translations = {
     backupButtonPro: 'Sauvegarder les Données (Pro)',
     exportButton: 'Exporter les Données',
     exportButtonEnt: 'Exporter les Données (Ent)',
+    bugReportButton: 'Signaler un Bug',
+    bugReportTitle: 'Signaler un Bug ou un Commentaire',
+    bugReportDesc: "Décrivez le problème que vous rencontrez ou tout commentaire que vous avez.",
     upgradeBannerTitle: 'Vous êtes sur le forfait Gratuit!',
     upgradeBannerSubtitle: 'Débloquez des fonctionnalités puissantes comme des livres illimités et des sauvegardes en mettant à niveau.',
     upgradeBannerButton: 'Mettre à Niveau',
@@ -323,6 +377,7 @@ const translations: Translations = {
     toastMemberDeleted: 'Membre supprimé.',
     toastLoanAdded: 'Livre prêté avec succès!',
     toastLoanReturned: 'Emprunt retourné avec succès!',
+    toastBugReported: 'Merci! Votre rapport a été soumis.',
     aiWelcomeMessage: "Bonjour! Je suis votre Assistant Bibliothécaire IA. Comment puis-je vous aider aujourd'hui? Vous pouvez me demander des suggestions de livres, des résumés, et plus encore.",
     aiPlaceholder: 'Demandez des suggestions de livres, des résumés, etc...',
   },
@@ -404,18 +459,15 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        log.addLog('INFO', `User state changed: ${firebaseUser.email} logged in.`);
         const userRef = doc(db, 'users', firebaseUser.uid);
         const userDoc = await getDoc(userRef);
         const lastLoginTime = new Date().toISOString();
 
         if (userDoc.exists()) {
-          // Existing user: update their last login time.
-          // The user object in the app's state doesn't need this immediately,
-          // as the Admin Panel will fetch the latest data directly.
           await setDoc(userRef, { lastLogin: lastLoginTime }, { merge: true });
           setUser(userDoc.data() as User);
         } else {
-          // New user: create the full user document with the last login time.
           const isSuperAdmin = firebaseUser.email === SUPER_ADMIN_EMAIL;
           const newUser: User = {
             uid: firebaseUser.uid,
@@ -427,10 +479,12 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             subscriptionStatus: 'active',
             lastLogin: lastLoginTime,
           };
+          log.addLog('INFO', `New user created: ${newUser.email}`);
           await setDoc(userRef, newUser);
           setUser(newUser);
         }
       } else {
+        log.addLog('INFO', `User state changed: logged out.`);
         setUser(null);
       }
       setLoading(false);
@@ -446,19 +500,22 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         const credential = GoogleAuthProvider.credentialFromResult(result);
         const token = credential?.accessToken;
         if(token) {
+           log.addLog('INFO', `GAPI token received for ${result.user.email}, initializing client.`);
            await gapiManager.initClient(token);
         }
-        // onAuthStateChanged will handle setting the user state
     } catch (error) {
         console.error("Authentication error:", error);
+        log.addLog('ERROR', `Authentication failed: ${error}`);
         setLoading(false);
     }
   };
 
   const handleSignOut = async () => {
     setLoading(true);
+    const userEmail = user?.email;
     await signOut(auth);
     setUser(null);
+    log.addLog('INFO', `User ${userEmail} signed out successfully.`);
     setLoading(false);
   };
     
@@ -468,6 +525,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       const userRef = doc(db, 'users', user.uid);
       await setDoc(userRef, { sheetId }, { merge: true });
       setUser(prevUser => prevUser ? { ...prevUser, sheetId } : null);
+      log.addLog('INFO', `User ${user.email} connected sheet ID: ${sheetId}`);
       setLoading(false);
   };
     
@@ -477,6 +535,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       const userRef = doc(db, 'users', user.uid);
       await setDoc(userRef, { plan, subscriptionStatus: 'active' }, { merge: true });
       setUser(prevUser => prevUser ? { ...prevUser, plan, subscriptionStatus: 'active' } : null);
+      log.addLog('INFO', `User ${user.email} updated subscription plan to: ${plan}`);
       setLoading(false);
   };
 
@@ -509,12 +568,12 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <AuthProvider>
-      <LanguageProvider>
-          <ToastProvider>
-             <App />
-          </ToastProvider>
-      </LanguageProvider>
-    </AuthProvider>
+    <LanguageProvider>
+      <ToastProvider>
+        <AuthProvider>
+           <App />
+        </AuthProvider>
+      </ToastProvider>
+    </LanguageProvider>
   </React.StrictMode>
 );
