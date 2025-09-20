@@ -17,23 +17,11 @@ export const SetupPrompt = () => {
             if (newSheetId) {
                 await updateSheetId(newSheetId);
             } else {
-                 showToast(t('toastSheetCreateFailed'), 'error');
+                 showToast('Failed to create new sheet.', 'error');
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error("Failed to create sheet:", error);
-            let errorMessage = t('toastSheetCreateError');
-            // Check for specific network error message from GAPI response
-            if (error?.body) {
-                try {
-                    const errorBody = JSON.parse(error.body);
-                    if (errorBody?.error?.message?.toLowerCase().includes("network error")) {
-                        errorMessage = t('toastSheetCreateNetworkError');
-                    }
-                } catch (e) { /* Ignore JSON parsing errors */ }
-            } else if (error?.message?.toLowerCase().includes('network')) {
-                 errorMessage = t('toastSheetCreateNetworkError');
-            }
-            showToast(errorMessage, 'error');
+            showToast('An error occurred while creating the sheet.', 'error');
         } finally {
             setIsCreating(false);
         }
