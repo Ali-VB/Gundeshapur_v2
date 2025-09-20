@@ -2,10 +2,10 @@ import React, { useState, useEffect, useContext, createContext } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { User, AuthContextType, LanguageContextType, ToastContextType, Translations, Locale, ToastMessage } from './types';
-import { auth, db, googleProvider, signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc } from './firebase';
+import { auth, db, googleProvider, onAuthStateChanged, signOut, doc, getDoc, setDoc, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from './firebase';
 import { gapiManager } from './googleApi';
 import { SUPER_ADMIN_EMAIL } from './constants';
-import { GoogleAuthProvider } from 'firebase/auth';
+
 
 // --- LANGUAGE/TRANSLATION CONTEXT ---
 const translations: Translations = {
@@ -400,7 +400,7 @@ export const useToast = () => {
 };
 
 
-// --- AUTH CONTEXT (IMPLEMENTED WITH REAL FIREBASE & GAPI) ---
+// --- AUTH CONTEXT (IMPLEMENTED WITH REDIRECT FLOW) ---
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -410,6 +410,33 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const { t } = useTranslation();
 
   useEffect(() => {
+    // This effect runs once on mount to handle both redirect results and session persistence.
+    
+    // First, check if the user is returning from a sign-in redirect.
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result) {
+          // User has successfully signed in via redirect.
+          const credential = GoogleAuthProvider.credentialFromResult(result);
+          const token = credential?.accessToken;
+          if (!token) {
+            throw new Error("Authentication failed: No access token provided.");
+          }
+          // Crucially, initialize the Google API client with the new token.
+          await gapiManager.initClient(token);
+        }
+        // If result is null, it's a normal page load, not a redirect return.
+        // The onAuthStateChanged listener below will handle persistent sessions.
+      })
+      .catch(async (error) => {
+        console.error("Authentication or GAPI initialization error:", error);
+        showToast(t('toastAuthGenericError'), 'error');
+        // If any part of the redirect result processing fails, sign out to ensure a clean state.
+        await signOut(auth);
+        setUser(null);
+      });
+
+    // Then, set up the listener for ongoing session management.
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const userRef = doc(db, 'users', firebaseUser.uid);
@@ -417,9 +444,11 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         const lastLoginTime = new Date().toISOString();
 
         if (userDoc.exists()) {
+          // Existing user, update last login and set state
           await setDoc(userRef, { lastLogin: lastLoginTime }, { merge: true });
-          setUser(userDoc.data() as User);
+          setUser({...(userDoc.data() as User), lastLogin: lastLoginTime});
         } else {
+          // New user, create the document in Firestore
           const isSuperAdmin = firebaseUser.email === SUPER_ADMIN_EMAIL;
           const newUser: User = {
             uid: firebaseUser.uid,
@@ -435,6 +464,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           setUser(newUser);
         }
       } else {
+        // No user is signed in.
         setUser(null);
       }
       setLoading(false);
@@ -444,34 +474,9 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   }, []);
   
   const handleSignIn = async () => {
-    try {
-        setLoading(true);
-        const result = await signInWithPopup(auth, googleProvider);
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        const token = credential?.accessToken;
-        if (token) {
-           await gapiManager.initClient(token);
-        } else {
-           // If for some reason we don't get a token, treat it as a failure.
-           throw new Error("Authentication failed: No access token provided.");
-        }
-    } catch (error: any) {
-        console.error("Authentication or GAPI initialization error:", error);
-        if (error.code === 'auth/popup-closed-by-user') {
-            showToast(t('toastAuthCancelled'), 'error');
-        } else if (error.code === 'auth/popup-blocked') {
-            showToast(t('toastAuthPopupBlocked'), 'error');
-        } else {
-            showToast(t('toastAuthGenericError'), 'error');
-        }
-        
-        // Clean up on any failure to ensure user is redirected to landing page.
-        await signOut(auth);
-        setUser(null);
-
-    } finally {
-        setLoading(false);
-    }
+    setLoading(true);
+    // Start the redirect flow. The rest of the logic is handled by the useEffect above.
+    await signInWithRedirect(auth, googleProvider);
   };
 
   const handleSignOut = async () => {
