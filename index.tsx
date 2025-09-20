@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useContext, createContext } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -376,16 +378,10 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       if (firebaseUser) {
         const userRef = doc(db, 'users', firebaseUser.uid);
         const userDoc = await getDoc(userRef);
-        const lastLoginTime = new Date().toISOString();
 
         if (userDoc.exists()) {
-          // Existing user: update their last login time.
-          // The user object in the app's state doesn't need this immediately,
-          // as the Admin Panel will fetch the latest data directly.
-          await setDoc(userRef, { lastLogin: lastLoginTime }, { merge: true });
           setUser(userDoc.data() as User);
         } else {
-          // New user: create the full user document with the last login time.
           const isSuperAdmin = firebaseUser.email === SUPER_ADMIN_EMAIL;
           const newUser: User = {
             uid: firebaseUser.uid,
@@ -395,7 +391,6 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             sheetId: null,
             plan: 'free',
             subscriptionStatus: 'active',
-            lastLogin: lastLoginTime,
           };
           await setDoc(userRef, newUser);
           setUser(newUser);
