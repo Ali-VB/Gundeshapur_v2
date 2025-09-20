@@ -25,11 +25,6 @@ const getAllUsers = async (): Promise<User[]> => {
     return userList;
 };
 
-export const updateUser = async (uid: string, updates: Partial<User>): Promise<void> => {
-    const userRef = doc(db, 'users', uid);
-    await setDoc(userRef, updates, { merge: true });
-};
-
 
 export {
   app,
