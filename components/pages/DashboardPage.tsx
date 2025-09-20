@@ -12,13 +12,14 @@ import { SettingsPage } from '../dashboard/SettingsPage';
 import { AILibrarianView } from '../dashboard/AILibrarianView';
 import { TableSkeleton } from '../common/Skeleton';
 import { DashboardStats } from '../dashboard/DashboardStats';
+import { SetupPrompt } from '../dashboard/SetupPrompt'; // New component for setup
 
 // Import Layout Components
 import { Logo } from '../common/Logo';
 import { DashboardHeader } from '../dashboard/DashboardHeader';
 
 // Sidebar Component
-const Sidebar: React.FC<{ activeView: string; setActiveView: (view: string) => void }> = ({ activeView, setActiveView }) => {
+const Sidebar: React.FC<{ activeView: string; setActiveView: (view: string) => void; disabled?: boolean }> = ({ activeView, setActiveView, disabled }) => {
     const { t } = useTranslation();
     const navItems = [
         { id: 'dashboard', label: t('dashboardTitle') },
@@ -39,8 +40,9 @@ const Sidebar: React.FC<{ activeView: string; setActiveView: (view: string) => v
                     {navItems.map(item => (
                         <li key={item.id}>
                             <button 
-                                onClick={() => setActiveView(item.id)}
-                                className={`w-full text-left text-lg font-semibold px-4 py-3 rounded-lg transition ${activeView === item.id ? 'bg-cyan-600 text-white' : 'text-slate-300 hover:bg-slate-700'}`}
+                                onClick={() => !disabled && setActiveView(item.id)}
+                                disabled={disabled}
+                                className={`w-full text-left text-lg font-semibold px-4 py-3 rounded-lg transition ${activeView === item.id && !disabled ? 'bg-cyan-600 text-white' : 'text-slate-300'} ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-700'}`}
                             >
                                 {item.label}
                             </button>
@@ -76,17 +78,34 @@ export const DashboardPage = () => {
             setLoans(loansData);
         } catch (error) {
             console.error("Failed to fetch library data:", error);
-            // Optionally: show a toast notification to the user
         } finally {
             setLoadingData(false);
         }
     };
 
     useEffect(() => {
-        if(activeView !== 'aiLibrarian' && activeView !== 'billing') {
+        // Only fetch data if the sheet is connected and we are on a data-driven view
+        if(user?.sheetId && activeView !== 'aiLibrarian' && activeView !== 'billing') {
             fetchData();
+        } else {
+            setLoadingData(false);
         }
     }, [user, activeView]);
+
+    // If the user has not set up their sheet, show the setup prompt inside the dashboard.
+    if (!user?.sheetId) {
+        return (
+            <div className="flex min-h-screen">
+                <Sidebar activeView="" setActiveView={() => {}} disabled={true} />
+                <div className="flex-1 flex flex-col">
+                    <DashboardHeader />
+                    <main className="flex-grow p-4 sm:p-8 flex items-center justify-center">
+                        <SetupPrompt />
+                    </main>
+                </div>
+            </div>
+        );
+    }
 
     const UpgradeBanner = () => (
         <div className="bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg p-5 mb-8 flex items-center justify-between text-white flex-col sm:flex-row gap-4 text-center sm:text-left">
