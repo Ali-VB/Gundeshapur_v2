@@ -118,6 +118,9 @@ const translations: Translations = {
     toastMemberDeleted: 'Member deleted.',
     toastLoanAdded: 'Book lent successfully!',
     toastLoanReturned: 'Loan returned successfully!',
+    toastAuthCancelled: 'Sign-in was cancelled.',
+    toastAuthPopupBlocked: 'Sign-in popup was blocked by the browser. Please allow popups.',
+    toastAuthGenericError: 'An error occurred during sign-in. Please try again.',
     // AI Librarian
     aiWelcomeMessage: "Hello! I'm your AI Librarian Assistant. How can I help you today? You can ask me for book suggestions, summaries, and more.",
     aiPlaceholder: 'Ask for book suggestions, summaries, etc...',
@@ -221,6 +224,9 @@ const translations: Translations = {
     toastMemberDeleted: 'Miembro eliminado.',
     toastLoanAdded: '¡Libro prestado con éxito!',
     toastLoanReturned: '¡Préstamo devuelto con éxito!',
+    toastAuthCancelled: 'El inicio de sesión fue cancelado.',
+    toastAuthPopupBlocked: 'La ventana de inicio de sesión fue bloqueada por el navegador. Por favor, permita las ventanas emergentes.',
+    toastAuthGenericError: 'Ocurrió un error durante el inicio de sesión. Por favor, inténtalo de nuevo.',
     aiWelcomeMessage: '¡Hola! Soy tu Asistente de Bibliotecario IA. ¿Cómo puedo ayudarte hoy? Puedes pedirme sugerencias de libros, resúmenes y más.',
     aiPlaceholder: 'Pide sugerencias de libros, resúmenes, etc...',
   },
@@ -323,6 +329,9 @@ const translations: Translations = {
     toastMemberDeleted: 'Membre supprimé.',
     toastLoanAdded: 'Livre prêté avec succès!',
     toastLoanReturned: 'Emprunt retourné avec succès!',
+    toastAuthCancelled: 'La connexion a été annulée.',
+    toastAuthPopupBlocked: 'La fenêtre de connexion a été bloquée par le navigateur. Veuillez autoriser les fenêtres contextuelles.',
+    toastAuthGenericError: "Une erreur s'est produite lors de la connexion. Veuillez réessayer.",
     aiWelcomeMessage: "Bonjour! Je suis votre Assistant Bibliothécaire IA. Comment puis-je vous aider aujourd'hui? Vous pouvez me demander des suggestions de livres, des résumés, et plus encore.",
     aiPlaceholder: 'Demandez des suggestions de livres, des résumés, etc...',
   },
@@ -337,10 +346,7 @@ const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children })
         setLocale(lang);
         localStorage.setItem('locale', lang);
     };
-
-    // Fix: Corrected the type of the `t` function to align with `LanguageContextType`.
-    // The key parameter is now `string`, and type assertions are used to handle translation lookups,
-    // ensuring the return type is always a string.
+    
     const t = (key: string): string => {
         return (translations[locale] as Record<string, string>)[key] || (translations.en as Record<string, string>)[key] || key;
     };
@@ -400,6 +406,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -409,13 +417,9 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         const lastLoginTime = new Date().toISOString();
 
         if (userDoc.exists()) {
-          // Existing user: update their last login time.
-          // The user object in the app's state doesn't need this immediately,
-          // as the Admin Panel will fetch the latest data directly.
           await setDoc(userRef, { lastLogin: lastLoginTime }, { merge: true });
           setUser(userDoc.data() as User);
         } else {
-          // New user: create the full user document with the last login time.
           const isSuperAdmin = firebaseUser.email === SUPER_ADMIN_EMAIL;
           const newUser: User = {
             uid: firebaseUser.uid,
@@ -448,9 +452,16 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         if(token) {
            await gapiManager.initClient(token);
         }
-        // onAuthStateChanged will handle setting the user state
-    } catch (error) {
+    } catch (error: any) {
         console.error("Authentication error:", error);
+        if (error.code === 'auth/popup-closed-by-user') {
+            showToast(t('toastAuthCancelled'), 'error');
+        } else if (error.code === 'auth/popup-blocked') {
+            showToast(t('toastAuthPopupBlocked'), 'error');
+        } else {
+            showToast(t('toastAuthGenericError'), 'error');
+        }
+    } finally {
         setLoading(false);
     }
   };
@@ -509,12 +520,12 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <AuthProvider>
-      <LanguageProvider>
-          <ToastProvider>
-             <App />
-          </ToastProvider>
-      </LanguageProvider>
-    </AuthProvider>
+    <LanguageProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </ToastProvider>
+    </LanguageProvider>
   </React.StrictMode>
 );
