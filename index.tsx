@@ -401,7 +401,7 @@ export const useToast = () => {
 };
 
 
-// --- AUTH CONTEXT (IMPLEMENTED WITH REDIRECT FLOW) ---
+// --- AUTH CONTEXT (RE-ARCHITECTED FOR STABILITY) ---
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -409,88 +409,102 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
   const { t } = useTranslation();
+  
+  const GAPI_TOKEN_KEY = 'gapiToken';
 
   useEffect(() => {
-    const initialize = async () => {
+    const initializeApp = async () => {
+      let gapiToken = sessionStorage.getItem(GAPI_TOKEN_KEY);
+      let gapiInitialized = false;
+      let firebaseUser = auth.currentUser;
+
       try {
-        // Step 1: Check for a redirect result.
-        const result = await getRedirectResult(auth);
+        // Step 1: Handle the redirect result from Google Sign-In.
+        // This runs only when the user is redirected back from Google.
+        if(!firebaseUser) { // only check for redirect if we don't have a user yet
+            const result = await getRedirectResult(auth);
+            if (result) {
+              firebaseUser = result.user;
+              const credential = GoogleAuthProvider.credentialFromResult(result);
+              const freshToken = credential?.accessToken;
+              if (freshToken) {
+                gapiToken = freshToken;
+                sessionStorage.setItem(GAPI_TOKEN_KEY, gapiToken);
+              }
+            }
+        }
         
-        if (result) {
-          // User has just returned from a sign-in.
-          const credential = GoogleAuthProvider.credentialFromResult(result);
-          const token = credential?.accessToken;
-          if (!token) {
-            throw new Error("Authentication failed: No access token provided.");
+        // Step 2: Initialize Google API Client if we have a token.
+        // This runs on initial load, redirect, or refresh.
+        if (gapiToken) {
+          try {
+            await gapiManager.initClient(gapiToken);
+            gapiInitialized = true;
+          } catch (gapiError) {
+            console.error("GAPI initialization failed, token might be expired.", gapiError);
+            sessionStorage.removeItem(GAPI_TOKEN_KEY);
+            // Force sign out to get a fresh token next time.
+            await signOut(auth);
+            firebaseUser = null;
           }
-          // Step 2: Initialize Google APIs with the new token. This is critical.
-          await gapiManager.initClient(token);
         }
 
-        // Step 3: Set up the auth state listener. This will handle both the user from the
-        // redirect AND any existing user session on a normal page load.
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-          if (firebaseUser) {
-            // Check if GAPI has a token. If not (e.g., session restored but token expired),
-            // it's an invalid state, so sign out.
-            if (!window.gapi?.client?.getToken()) {
-                // The gapi token might be missing on a simple page refresh. Re-initialize it silently.
-                // This part is complex. For now, let's assume onAuthStateChanged implies gapi is ready,
-                // as the redirect flow *should* have set it. A more advanced implementation might
-                // need to handle token refresh here. The simplest fix for now is to just proceed.
-            }
-              
-            const userRef = doc(db, 'users', firebaseUser.uid);
-            const userDoc = await getDoc(userRef);
-            const lastLoginTime = new Date().toISOString();
+        // Step 3: Now that GAPI is handled, determine the final user state.
+        if (firebaseUser && gapiInitialized) {
+          // This is the only successful login path.
+          const userRef = doc(db, 'users', firebaseUser.uid);
+          const userDoc = await getDoc(userRef);
+          const lastLoginTime = new Date().toISOString();
 
-            if (userDoc.exists()) {
-              await setDoc(userRef, { lastLogin: lastLoginTime }, { merge: true });
-              setUser({...(userDoc.data() as User), lastLogin: lastLoginTime});
-            } else {
-              const isSuperAdmin = firebaseUser.email === SUPER_ADMIN_EMAIL;
-              const newUser: User = {
-                uid: firebaseUser.uid,
-                email: firebaseUser.email || 'No email',
-                displayName: firebaseUser.displayName || 'No name',
-                role: isSuperAdmin ? 'admin' : 'user',
-                sheetId: null,
-                plan: 'free',
-                subscriptionStatus: 'active',
-                lastLogin: lastLoginTime,
-              };
-              await setDoc(userRef, newUser);
-              setUser(newUser);
-            }
+          if (userDoc.exists()) {
+            await setDoc(userRef, { lastLogin: lastLoginTime }, { merge: true });
+            setUser({ ...(userDoc.data() as User), lastLogin: lastLoginTime });
           } else {
-            setUser(null);
+            const isSuperAdmin = firebaseUser.email === SUPER_ADMIN_EMAIL;
+            const newUser: User = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || 'No email',
+              displayName: firebaseUser.displayName || 'No name',
+              role: isSuperAdmin ? 'admin' : 'user',
+              sheetId: null,
+              plan: 'free',
+              subscriptionStatus: 'active',
+              lastLogin: lastLoginTime,
+            };
+            await setDoc(userRef, newUser);
+            setUser(newUser);
           }
-          setLoading(false); // Only stop loading after all checks are done.
-        });
-
-        // The unsubscribe function will be returned and called on component unmount.
-        return unsubscribe;
-
-      } catch (error) {
-        console.error("Authentication or GAPI initialization error:", error);
-        showToast(t('toastAuthGenericError'), 'error');
-        // If any part of the critical path fails, sign out to ensure a clean state.
+        } else {
+          // If any condition fails (no user, or GAPI failed), ensure we are in a clean signed-out state.
+          setUser(null);
+          sessionStorage.removeItem(GAPI_TOKEN_KEY);
+        }
+        
+      } catch (error: any) {
+        console.error("Critical authentication error:", error);
+        if(error.code !== 'auth/redirect-cancelled-by-user') {
+            showToast(t('toastAuthGenericError'), 'error');
+        }
         await signOut(auth);
         setUser(null);
+        sessionStorage.removeItem(GAPI_TOKEN_KEY);
+      } finally {
         setLoading(false);
       }
     };
 
-    const unsubscribePromise = initialize();
+    initializeApp();
+    
+    // Also, listen for external auth changes (e.g. user logs out from another tab)
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        if (!firebaseUser && user) {
+            // User was logged in, but now isn't. Clean up state.
+            setUser(null);
+            sessionStorage.removeItem(GAPI_TOKEN_KEY);
+        }
+    });
 
-    // Cleanup function for the useEffect hook
-    return () => {
-        unsubscribePromise.then(unsubscribe => {
-            if (unsubscribe) {
-                unsubscribe();
-            }
-        });
-    };
+    return unsubscribe;
   }, []);
   
   const handleSignIn = async () => {
@@ -501,6 +515,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const handleSignOut = async () => {
     setLoading(true);
     await signOut(auth);
+    sessionStorage.removeItem(GAPI_TOKEN_KEY);
     setUser(null);
     setLoading(false);
   };
