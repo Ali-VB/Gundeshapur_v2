@@ -1,0 +1,99 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - generic "Gundeshapur" [ref=e8]:
+          - img [ref=e9]
+          - generic [ref=e13]: Gundeshapur
+        - button "Start for Free" [ref=e14] [cursor=pointer]
+      - main [ref=e15]:
+        - generic [ref=e17]:
+          - heading "Simple, Powerful Library Management" [level=1] [ref=e18]
+          - paragraph [ref=e19]:
+            - generic [ref=e20]: Gundeshapur
+            - text: helps small libraries, clubs, and communities manage their books and members with an easy-to-use, affordable platform powered by Google Sheets.
+          - button "Start for Free Today" [ref=e21] [cursor=pointer]
+        - generic [ref=e23]:
+          - heading "A Modern Toolkit for Your Community Library" [level=2] [ref=e24]
+          - generic [ref=e25]:
+            - generic [ref=e26]:
+              - heading "Book Management" [level=3] [ref=e27]
+              - paragraph [ref=e28]: Easily add, edit, and track your entire collection, complete with Dewey Decimal support.
+            - generic [ref=e29]:
+              - heading "Member Tracking" [level=3] [ref=e30]
+              - paragraph [ref=e31]: Manage member information, roles, and status (active/inactive) in one place.
+            - generic [ref=e32]:
+              - heading "Google Sheets Integration" [level=3] [ref=e33]
+              - paragraph [ref=e34]: Connect your own Google Sheet or let us create one for you. Manage data in a familiar environment.
+            - generic [ref=e35]:
+              - heading "Effortless Loans" [level=3] [ref=e36]
+              - paragraph [ref=e37]: Lend and return books with a simple interface. Automatically tracks due dates and availability.
+            - generic [ref=e38]:
+              - heading "Secure Backups" [level=3] [ref=e39]
+              - paragraph [ref=e40]: Pro and Enterprise users get automated data backups to secure cloud storage.
+            - generic [ref=e41]:
+              - heading "Multi-Language" [level=3] [ref=e42]
+              - paragraph [ref=e43]: Serve your diverse community with an interface available in English, Spanish, and French.
+        - generic [ref=e45]:
+          - heading "Choose Your Plan" [level=2] [ref=e46]
+          - generic [ref=e47]:
+            - generic [ref=e48]:
+              - heading "Free" [level=3] [ref=e49]
+              - paragraph [ref=e50]: $0
+              - list [ref=e51]:
+                - listitem [ref=e52]:
+                  - img [ref=e53]
+                  - text: Up to 100 books
+                - listitem [ref=e55]:
+                  - img [ref=e56]
+                  - text: Up to 25 members
+                - listitem [ref=e58]:
+                  - img [ref=e59]
+                  - text: Basic support
+              - button "Start for Free" [ref=e61] [cursor=pointer]
+            - generic [ref=e62]:
+              - generic [ref=e63]: RECOMMENDED
+              - heading "Pro" [level=3] [ref=e64]
+              - paragraph [ref=e65]:
+                - text: $15
+                - generic [ref=e66]: /mo
+              - list [ref=e67]:
+                - listitem [ref=e68]:
+                  - img [ref=e69]
+                  - text: Unlimited books & members
+                - listitem [ref=e71]:
+                  - img [ref=e72]
+                  - text: JSON Backup & Restore
+                - listitem [ref=e74]:
+                  - img [ref=e75]
+                  - text: Multi-language support
+                - listitem [ref=e77]:
+                  - img [ref=e78]
+                  - text: Priority email support
+              - button "Start Pro Plan" [ref=e80] [cursor=pointer]
+            - generic [ref=e81]:
+              - heading "Enterprise" [level=3] [ref=e82]
+              - paragraph [ref=e83]:
+                - text: $40
+                - generic [ref=e84]: /mo
+              - list [ref=e85]:
+                - listitem [ref=e86]:
+                  - img [ref=e87]
+                  - text: All Pro features
+                - listitem [ref=e89]:
+                  - img [ref=e90]
+                  - text: CSV/Excel Export
+                - listitem [ref=e92]:
+                  - img [ref=e93]
+                  - text: Custom Branding
+                - listitem [ref=e95]:
+                  - img [ref=e96]
+                  - text: Dedicated support
+              - button "Contact Us" [ref=e98] [cursor=pointer]
+      - generic [ref=e100]: © 2025 Gundeshapur. All rights reserved.
+  - iframe [ref=e101]:
+    
+```

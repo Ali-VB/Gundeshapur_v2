@@ -2,20 +2,20 @@
 import { GoogleGenAI } from '@google/genai';
 
 // IMPORTANT: As per security best practices and platform requirements,
-// the API key is sourced EXCLUSIVELY from the environment variable `process.env.API_KEY`.
+// the API key is sourced EXCLUSIVELY from the environment variable `import.meta.env.VITE_GEMINI_API_KEY`.
 // This variable must be configured in your deployment environment (e.g., Netlify, Vercel).
-const apiKey = process.env.API_KEY;
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
 let ai: GoogleGenAI | null = null;
 if (apiKey) {
     ai = new GoogleGenAI({ apiKey });
 } else {
-    console.warn("API_KEY environment variable not set. AI features will be disabled.");
+    console.warn("VITE_GEMINI_API_KEY environment variable not set. AI features will be disabled.");
 }
 
 export const generateText = async (prompt: string): Promise<string> => {
     if (!ai) {
-        return "AI service is not configured. Please ensure the API_KEY is set in your environment variables.";
+        return "AI service is not configured. Please ensure the VITE_GEMINI_API_KEY is set in your environment variables.";
     }
     try {
         const response = await ai.models.generateContent({

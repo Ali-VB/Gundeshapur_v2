@@ -1,24 +1,18 @@
 
 // This file centralizes all API keys and configuration.
-// IMPORTANT: In a real production app, these keys should be stored in environment variables, not committed to source control.
+// IMPORTANT: API keys are now stored in environment variables for security.
 
 // --- FIREBASE CONFIGURATION ---
 // You can get this from the Firebase Console:
 // Project Settings > General > Your apps > Firebase SDK snippet > Config
 export const firebaseConfig = {
-  // apiKey: "YOUR_FIREBASE_API_KEY",
-  // authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  // projectId: "YOUR_PROJECT_ID",
-  // storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  // messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  // appId: "YOUR_APP_ID"
-  apiKey: "AIzaSyBbtKVoZ7pc6Ka0zjE9VhODiibilwfrYds",
-  authDomain: "gundeshapurapp.firebaseapp.com",
-  projectId: "gundeshapurapp",
-  storageBucket: "gundeshapurapp.firebasestorage.app",
-  messagingSenderId: "712479653466",
-  appId: "1:712479653466:web:6401892af1c5ce66c42263",
-  measurementId: "G-VQHYVSRPG3"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 
@@ -27,9 +21,9 @@ export const firebaseConfig = {
 // APIs & Services > Credentials
 export const googleApiConfig = {
     // This API key is used for non-authenticated API calls.
-    apiKey: "AIzaSyAfqF7H7zu_jF5H7fuCFox-1AkgYqJp7Dw",
+    apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
     // This Client ID is for the OAuth 2.0 flow.
-    clientId: "839939125126-juive3cpl9im1fstav11pgpr40nbt0fu.apps.googleusercontent.com",
+    clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
     // The scopes define the permissions our app requests from the user.
     scopes: [
         'https://www.googleapis.com/auth/spreadsheets',

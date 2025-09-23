@@ -1,5 +1,6 @@
 
 import { googleApiConfig } from './config';
+import { getDefaultHeaderRow } from './sheetUtils';
 
 declare global {
   interface Window {
@@ -86,9 +87,9 @@ export const createSpreadsheet = async (title: string): Promise<string | null> =
     const batchUpdateValuesRequest = {
         valueInputOption: 'USER_ENTERED',
         data: [
-            { range: 'Books!A1', values: [['id', 'title', 'author', 'year', 'isbn', 'publisher', 'language', 'ddc', 'tags', 'totalCopies', 'availableCopies']] },
-            { range: 'Members!A1', values: [['id', 'name', 'email', 'phone', 'role', 'status']] },
-            { range: 'Loans!A1', values: [['id', 'bookId', 'memberId', 'loanDate', 'dueDate', 'returnDate', 'status']] }
+            { range: 'Books!A1', values: [getDefaultHeaderRow('Books')] },
+            { range: 'Members!A1', values: [getDefaultHeaderRow('Members')] },
+            { range: 'Loans!A1', values: [getDefaultHeaderRow('Loans')] }
         ]
     };
     await sheetsApi.spreadsheets.values.batchUpdate({

@@ -19,9 +19,7 @@ function App() {
     if (user?.role === 'admin') {
       return <AdminPage />;
     }
-    if (!user?.sheetId) {
-      return <SetupPage />;
-    }
+    // Always redirect to Dashboard after login, setup will be handled within Dashboard
     return <DashboardPage />;
   };
 
