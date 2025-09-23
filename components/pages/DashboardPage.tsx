@@ -10,7 +10,6 @@ import { BooksView } from '../dashboard/BooksView';
 import { MembersView } from '../dashboard/MembersView';
 import { LoansView } from '../dashboard/LoansView';
 import { SettingsPage } from '../dashboard/SettingsPage';
-import { AILibrarianView } from '../dashboard/AILibrarianView';
 import { TableSkeleton } from '../common/Skeleton';
 import { DashboardStats } from '../dashboard/DashboardStats';
 
@@ -28,7 +27,6 @@ const Sidebar: React.FC<{ activeView: string; setActiveView: (view: string) => v
         { id: 'members', label: t('tabMembers') },
         { id: 'loans', label: t('tabLoans') },
         { id: 'billing', label: t('tabBilling') },
-        { id: 'aiLibrarian', label: t('tabAILibrarian') },
     ];
     
     return (
@@ -88,7 +86,7 @@ export const DashboardPage = () => {
     };
 
     useEffect(() => {
-        if(activeView !== 'aiLibrarian' && activeView !== 'billing') {
+        if(activeView !== 'billing') {
             fetchData();
         }
     }, [user, activeView]);
@@ -177,7 +175,7 @@ export const DashboardPage = () => {
     );
     
     const renderContent = () => {
-        if(loadingData && activeView !== 'aiLibrarian' && activeView !== 'billing') {
+        if(loadingData && activeView !== 'billing') {
              return <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 min-h-[400px]"><TableSkeleton /></div>;
         }
         
@@ -187,7 +185,6 @@ export const DashboardPage = () => {
             'members': <MembersView members={members} onUpdate={fetchData} />,
             'loans': <LoansView loans={loans} books={books} members={members} onUpdate={fetchData} />,
             'billing': <SettingsPage />,
-            'aiLibrarian': <AILibrarianView />,
         };
 
         const content = views[activeView] || null;
@@ -208,7 +205,7 @@ export const DashboardPage = () => {
                     {user?.plan === 'free' && activeView !== 'billing' && <UpgradeBanner />}
                      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                         <h1 className="text-4xl font-bold text-slate-100 capitalize">
-                            {activeView === 'aiLibrarian' ? t('tabAILibrarian') : activeView}
+                            {activeView}
                         </h1>
                     </div>
                     {renderContent()}
